@@ -1,0 +1,24 @@
+{
+  "name": "hubspot-ai-bot",
+  "version": "2.0.0",
+  "description": "Commercial AI bot with WhatsApp, HubSpot CRM, and Ollama LLM",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "keywords": ["chatbot", "whatsapp", "hubspot", "ollama", "ai"],
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.7.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-async-errors": "^3.1.1",
+    "express-rate-limit": "^7.4.0",
+    "helmet": "^7.1.0",
+    "pg": "^8.12.0",
+    "whatsapp-web.js": "^1.25.0",
+    "winston": "^3.13.0"
+  }
+}

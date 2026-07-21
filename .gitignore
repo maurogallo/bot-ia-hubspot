@@ -1,0 +1,7 @@
+node_modules/
+.env
+logs/
+whatsapp-session/
+whatsapp-qr.txt
+.DS_Store
+*.log

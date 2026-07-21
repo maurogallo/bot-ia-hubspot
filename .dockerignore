@@ -1,0 +1,8 @@
+node_modules
+.git
+.env
+logs
+whatsapp-session
+whatsapp-qr.txt
+*.md
+.gitignore
