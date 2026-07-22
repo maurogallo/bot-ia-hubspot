@@ -108,7 +108,53 @@ function createStore() {
     );
   }
 
-  return { migrate, pool, getOrCreateSession, addMessage, getConversationHistory, updateSessionContext, saveContact };
+  async function getActiveConversations(limit = 20) {
+    const result = await query(`
+      SELECT s.id, s.channel, s.phone, s.contact_id, s.is_active,
+             s.created_at, s.updated_at,
+             (SELECT content FROM messages WHERE session_id = s.id ORDER BY created_at DESC LIMIT 1) as last_message,
+             (SELECT role FROM messages WHERE session_id = s.id ORDER BY created_at DESC LIMIT 1) as last_role,
+             (SELECT COUNT(*) FROM messages WHERE session_id = s.id) as message_count,
+             (SELECT COUNT(*) FROM messages WHERE session_id = s.id AND role = 'user') as user_messages
+      FROM sessions s
+      WHERE s.is_active = true
+      ORDER BY s.updated_at DESC
+      LIMIT $1
+    `, [limit]);
+    return result.rows;
+  }
+
+  async function getConversationById(sessionId) {
+    const session = await query('SELECT * FROM sessions WHERE id = $1', [sessionId]);
+    if (session.rows.length === 0) return null;
+    const messages = await query(
+      'SELECT role, content, metadata, created_at FROM messages WHERE session_id = $1 ORDER BY created_at ASC',
+      [sessionId]
+    );
+    return { session: session.rows[0], messages: messages.rows };
+  }
+
+  async function getLeads() {
+    const result = await query(
+      'SELECT * FROM contacts ORDER BY last_interaction DESC NULLS LAST, created_at DESC'
+    );
+    return result.rows;
+  }
+
+  async function getStats() {
+    const result = await query(`
+      SELECT
+        (SELECT COUNT(*) FROM sessions) as total_sessions,
+        (SELECT COUNT(*) FROM sessions WHERE is_active = true) as active_sessions,
+        (SELECT COUNT(*) FROM contacts) as total_leads,
+        (SELECT COUNT(*) FROM messages) as total_messages,
+        (SELECT COUNT(*) FROM messages WHERE created_at >= NOW() - INTERVAL '24 hours') as messages_24h
+    `);
+    return result.rows[0];
+  }
+
+  return { migrate, pool, getOrCreateSession, addMessage, getConversationHistory,
+    updateSessionContext, saveContact, getActiveConversations, getConversationById, getLeads, getStats };
 }
 
 module.exports = { createStore };

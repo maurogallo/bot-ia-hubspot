@@ -104,6 +104,51 @@ footer{position:fixed;bottom:0;left:0;right:0;padding:12px;background:#fff;borde
     res.json({ qr });
   });
 
+  app.get('/dashboard', (req, res) => {
+    res.sendFile(path.resolve(__dirname, '..', '..', '..', 'public', 'dashboard.html'));
+  });
+
+  app.get('/api/dashboard/stats', async (req, res) => {
+    try {
+      const stats = await deps.store.getStats();
+      res.json(stats);
+    } catch (error) {
+      logger.error('Dashboard stats error', { error: error.message });
+      res.status(500).json({ error: 'Error al obtener estadísticas' });
+    }
+  });
+
+  app.get('/api/dashboard/conversations', async (req, res) => {
+    try {
+      const conversations = await deps.store.getActiveConversations();
+      res.json(conversations);
+    } catch (error) {
+      logger.error('Dashboard conversations error', { error: error.message });
+      res.status(500).json({ error: 'Error al obtener conversaciones' });
+    }
+  });
+
+  app.get('/api/dashboard/conversations/:id', async (req, res) => {
+    try {
+      const conversation = await deps.store.getConversationById(req.params.id);
+      if (!conversation) return res.status(404).json({ error: 'Conversación no encontrada' });
+      res.json(conversation);
+    } catch (error) {
+      logger.error('Dashboard conversation detail error', { error: error.message });
+      res.status(500).json({ error: 'Error al obtener conversación' });
+    }
+  });
+
+  app.get('/api/dashboard/leads', async (req, res) => {
+    try {
+      const leads = await deps.store.getLeads();
+      res.json(leads);
+    } catch (error) {
+      logger.error('Dashboard leads error', { error: error.message });
+      res.status(500).json({ error: 'Error al obtener leads' });
+    }
+  });
+
   app.use((req, res) => { res.status(404).json({ error: 'Ruta no encontrada' }); });
   app.use((err, req, res, next) => {
     logger.error('Unhandled error', { error: err.message, stack: err.stack, path: req.path });
