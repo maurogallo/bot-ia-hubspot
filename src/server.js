@@ -1,79 +1,52 @@
-const app = require('./app');
 const logger = require('./logger');
 const config = require('./config');
-const database = require('./database');
-const whatsapp = require('./whatsapp');
+const { app, store, whatsapp } = require('./app');
 
 let server;
-let whatsappClient;
 
 async function start() {
-  logger.info('Starting bot server...', {
+  logger.info('Starting server...', {
     environment: config.nodeEnv,
     port: config.port,
     ollamaModel: config.ollama.model,
   });
 
   try {
-    await database.migrate();
-    logger.info('Database connected and migrated');
+    await store.migrate();
+    logger.info('Database migrated');
   } catch (error) {
-    logger.error('Failed to connect to database', { error: error.message });
+    logger.error('Database connection failed', { error: error.message });
     process.exit(1);
   }
 
-  try {
-    whatsappClient = whatsapp.initialize();
-    logger.info('WhatsApp client initializing...');
-  } catch (error) {
-    logger.error('Failed to initialize WhatsApp client', { error: error.message });
-  }
-
   server = app.listen(config.port, () => {
-    logger.info(`Server listening on port ${config.port}`);
+    logger.info(`Listening on http://localhost:${config.port}`);
+    logger.info('WhatsApp client initializing...');
   });
 }
 
 async function shutdown(signal) {
-  logger.info(`${signal} received. Starting graceful shutdown...`);
-
+  logger.info(`${signal} received. Shutting down...`);
   if (server) {
     server.close(async () => {
       logger.info('HTTP server closed');
-
-      if (whatsappClient) {
-        try {
-          await whatsappClient.destroy();
-          logger.info('WhatsApp client destroyed');
-        } catch { /* ignore */ }
+      if (whatsapp.getClient()) {
+        try { await whatsapp.getClient().destroy(); logger.info('WhatsApp destroyed'); } catch { /* ignore */ }
       }
-
-      try {
-        await database.pool.end();
-        logger.info('Database pool closed');
-      } catch { /* ignore */ }
-
-      logger.info('Graceful shutdown completed');
+      try { await store.pool.end(); logger.info('DB pool closed'); } catch { /* ignore */ }
+      logger.info('Shutdown complete');
       process.exit(0);
     });
-
-    setTimeout(() => {
-      logger.error('Forced shutdown after timeout');
-      process.exit(1);
-    }, 30000);
-  } else {
-    process.exit(0);
-  }
+    setTimeout(() => { logger.error('Forced shutdown'); process.exit(1); }, 30000);
+  } else process.exit(0);
 }
 
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('SIGINT', () => shutdown('SIGINT'));
-
 process.on('uncaughtException', (error) => {
-  logger.error('Uncaught exception', { error: error.message, stack: error.stack });
+  logger.error('Uncaught exception', { error: error.message });
   shutdown('uncaughtException');
 });
-
 process.on('unhandledRejection', (reason) => {
   logger.error('Unhandled rejection', { reason: String(reason) });
 });

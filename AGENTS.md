@@ -27,20 +27,45 @@ Anuncio en Instagram/Facebook/TikTok/X
 
 ## Arquitectura
 
-### Estructura del proyecto
+### Estructura del proyecto (Arquitectura Hexagonal)
 
 ```
 src/
-├── config.js       # Config centralizada con validación de env vars
-├── logger.js       # Winston (consola + archivos rotados)
-├── database.js     # Pool PostgreSQL + migraciones automáticas
-├── session.js      # Sesiones conversacionales con contexto persistente
-├── ai-agent.js     # Integración con Ollama (prompt comercial estructurado)
-├── hubspot.js      # HubSpot OAuth2 + CRUD (contactos, deals)
-├── whatsapp.js     # whatsapp-web.js con Chrome/Docker
-├── app.js          # Express (helmet, cors, rate-limit, rutas)
-└── server.js       # Entry point con graceful shutdown
+├── domain/                     # Hexágono — cero dependencias externas
+│   ├── entities.js             # Session, Message, Lead (objetos puros)
+│   └── use-cases.js            # handleMessage (caso de uso principal)
+├── ports/                      # Interfaces / contratos
+│   ├── conversation-store.js   # Almacenamiento de sesiones y mensajes
+│   ├── ai-provider.js          # Generación de respuestas IA
+│   └── crm-provider.js         # Integración con CRM
+├── adapters/
+│   ├── inbound/                # Adaptadores de entrada
+│   │   ├── express-adapter.js  # HTTP (REST API, webhook, static files)
+│   │   └── whatsapp-adapter.js # whatsapp-web.js (eventos entrantes)
+│   └── outbound/               # Adaptadores de salida
+│       ├── postgres-store.js   # ConversationStore → PostgreSQL
+│       ├── ollama-provider.js  # AIProvider → Ollama (Llama 3/Mistral)
+│       └── hubspot-provider.js # CRMProvider → HubSpot OAuth2
+├── config.js                   # Config centralizada con validación
+├── logger.js                   # Winston (consola + archivos rotados)
+├── app.js                      # Punto de inyección de dependencias (DI)
+└── server.js                   # Entry point con graceful shutdown
 ```
+
+### Inyección de dependencias (app.js)
+
+```
+app.js (DI Container)
+  ├→ postgres-store.js   → store  ──┐
+  ├→ ollama-provider.js   → ai    ──┤
+  ├→ hubspot-provider.js  → crm   ──┤
+  └→ use-cases.js (handleMessage) ──┤
+                                      ▼
+                              express-adapter(deps)
+                              whatsapp-adapter(deps)
+```
+
+Los adaptadores reciben las dependencias por constructor. El dominio nunca importa nada externo.
 
 ### Flujo del mensaje
 
@@ -68,7 +93,7 @@ session.addMessage('assistant', respuesta) → persiste respuesta
 Envía respuesta al canal origen
 ```
 
-### Prompt del agente IA (ai-agent.js)
+### Prompt del agente IA (ollama-provider.js)
 
 El system prompt define al agente como asesor comercial de `NeoWeb Studio` con:
 
