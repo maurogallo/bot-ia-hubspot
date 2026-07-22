@@ -60,7 +60,7 @@ services:
       HUBSPOT_CLIENT_SECRET: ${HUBSPOT_CLIENT_SECRET:-}
       HUBSPOT_ACCESS_TOKEN: ${HUBSPOT_ACCESS_TOKEN:-}
       HUBSPOT_REFRESH_TOKEN: ${HUBSPOT_REFRESH_TOKEN:-}
-      HUBSPOT_REDIRECT_URI: ${HUBSPOT_REDIRECT_URI:-http://localhost:3000/oauth/callback}
+      HUBSPOT_REDIRECT_URI: ${HUBSPOT_REDIRECT_URI:-http://localhost:3099/oauth/callback}
       BUSINESS_NAME: ${BUSINESS_NAME:-NeoWeb Studio}
       BUSINESS_SERVICES: ${BUSINESS_SERVICES:-Desarrollo web, landing pages, automatización}
       CORS_ORIGIN: ${CORS_ORIGIN:-*}
@@ -69,7 +69,7 @@ services:
       - ./logs:/app/logs
       - ./whatsapp-qr.txt:/app/whatsapp-qr.txt
     ports:
-      - "3000:3000"
+      - "3099:3099"
     restart: unless-stopped
 
 volumes:

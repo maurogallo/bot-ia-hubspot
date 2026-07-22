@@ -2,7 +2,7 @@ const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '..', '.env') });
 
 const config = {
-  port: parseInt(process.env.PORT, 10) || 3000,
+  port: parseInt(process.env.PORT, 10) || 3099,
   nodeEnv: process.env.NODE_ENV || 'development',
 
   db: {
@@ -17,7 +17,7 @@ const config = {
   hubspot: {
     clientId: process.env.HUBSPOT_CLIENT_ID,
     clientSecret: process.env.HUBSPOT_CLIENT_SECRET,
-    redirectUri: process.env.HUBSPOT_REDIRECT_URI || 'http://localhost:3000/oauth/callback',
+    redirectUri: process.env.HUBSPOT_REDIRECT_URI || 'http://localhost:3099/oauth/callback',
     accessToken: process.env.HUBSPOT_ACCESS_TOKEN,
     refreshToken: process.env.HUBSPOT_REFRESH_TOKEN,
   },
