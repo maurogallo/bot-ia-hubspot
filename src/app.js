@@ -10,9 +10,14 @@ const aiAgent = require('./ai-agent');
 const hubspot = require('./hubspot');
 const whatsapp = require('./whatsapp');
 
+const path = require('path');
+
 const app = express();
 
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  contentSecurityPolicy: false,
+}));
 app.use(cors({
   origin: process.env.CORS_ORIGIN || '*',
   methods: ['GET', 'POST'],
@@ -41,6 +46,44 @@ app.use((req, res, next) => {
     });
   });
   next();
+});
+
+app.use(express.static(path.resolve(__dirname, '..', 'public'), {
+  maxAge: '1h',
+  setHeaders: function (res, filePath) {
+    if (filePath.endsWith('.js')) {
+      res.setHeader('Content-Type', 'application/javascript');
+    }
+  },
+}));
+
+app.get('/widget/test', (req, res) => {
+  const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Demo Widget - ${config.business.name}</title>
+  <style>
+    body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:linear-gradient(135deg,#f0f4ff,#e0e7ff);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;text-align:center}
+    h1{color:#1e293b;font-size:28px;margin-bottom:8px}
+    p{color:#64748b;font-size:16px;max-width:500px;line-height:1.6}
+    .card{background:#fff;border-radius:16px;padding:32px;box-shadow:0 4px 24px rgba(0,0,0,.08);margin-top:24px}
+    .badge{display:inline-block;background:#2563eb10;color:#2563eb;padding:4px 12px;border-radius:20px;font-size:13px;margin-bottom:16px}
+    footer{position:fixed;bottom:0;left:0;right:0;padding:12px;background:#fff;border-top:1px solid #e2e8f0;font-size:12px;color:#94a3b8}
+  </style>
+</head>
+<body>
+  <div class="badge">Widget de Chat — Demo</div>
+  <h1>${config.business.name}</h1>
+  <p>Haz clic en el botón de chat en la esquina inferior derecha para probar el widget.</p>
+  <div class="card">💬 El bot te responderá usando IA local (Ollama)</div>
+  <footer>Powered by Ollama + HubSpot CRM</footer>
+
+  <script src="/widget.js" data-business="${config.business.name}" data-primary="#2563eb" data-welcome="¡Hola! Soy el asistente virtual de ${config.business.name}. ¿Qué servicio necesitas?"></script>
+</body>
+</html>`;
+  res.type('html').send(html);
 });
 
 app.get('/health', async (req, res) => {
