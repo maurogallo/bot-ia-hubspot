@@ -33,7 +33,7 @@ function createAdapter(deps) {
       if (message.isGroup) return;
       logger.info('WhatsApp message', { phone: message.from, text: message.body.substring(0, 100) });
 
-      const reply = await deps.handleMessage({
+      const result = await deps.handleMessage({
         message: message.body,
         from: message.from,
         channel: 'whatsapp',
@@ -42,7 +42,10 @@ function createAdapter(deps) {
         crm: deps.crm,
       });
 
-      await client.sendMessage(message.from, reply);
+      await client.sendMessage(message.from, result.response);
+      if (result.handoffNeeded) {
+        logger.info('Handoff needed for WhatsApp session', { phone: message.from });
+      }
     } catch (error) {
       logger.error('WhatsApp message error', { error: error.message, phone: message?.from });
     }

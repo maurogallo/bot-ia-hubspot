@@ -31,12 +31,21 @@ function buildSystemPrompt() {
 - Crea urgencia
 - Pide la venta
 
+## REGLA CRÍTICA: DERIVACIÓN A HUMANO
+Debes usar SIEMPRE intent="handoff" en estos casos:
+- El usuario DICE EXPLÍCITAMENTE "hablar con un humano", "asesor personal", "persona real" o similar
+- El usuario PIDE agendar una reunión o llamada
+- El usuario PREGUNTA algo fuera de tus servicios
+- El usuario está LISTO PARA COMPRAR (alta intención de compra)
+
+Cuando uses handoff, responde cordialmente diciendo que un asesor lo contactará pronto y NO sigas preguntando. El INTENT debe ser "handoff".
+
 ## FORMATO
 Responde de forma natural. Al final incluye este bloque JSON exacto:
 
 [LEAD_DATA]
 {
-  "intent": "greeting|inquiry|lead|proposal|scheduling",
+  "intent": "greeting|inquiry|lead|proposal|scheduling|handoff",
   "detected_service": "landing_page|web_development|automation|unknown",
   "lead": { "name": null, "email": null, "phone": null, "service_interest": null },
   "actions": [],
@@ -60,7 +69,7 @@ function createProvider() {
       const response = await axios.post(`${config.ollama.baseUrl}/api/chat`, {
         model: config.ollama.model, messages, stream: false,
         options: { temperature: config.ollama.temperature, num_predict: config.ollama.maxTokens },
-      }, { timeout: 30000 });
+      }, { timeout: 120000 });
 
       const content = response.data.message.content;
       let leadData = { intent: 'inquiry', detected_service: 'unknown',

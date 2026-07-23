@@ -1,0 +1,71 @@
+Hay competencia económica en Colombia: soluciones simples de WhatsApp+IA ya parten aproximadamente desde $150.000–$250.000 COP/mes, mientras que agentes con integraciones y personalización suben a rangos medios. PulsoFlow, agencIAme y Ventiva son referencias directas. Tu espacio competitivo está en el segmento B2B que necesita ventas consultivas, HubSpot y automatización real, no solo respuestas FAQ.
+Plan	Implementación	Mensualidad	Cliente ideal	Incluye
+Piloto	$1.490.000 COP	$449.000 COP	Negocio pequeño	WhatsApp, webchat, captura de lead, HubSpot, 1 flujo comercial, reporte mensual
+Growth	$2.990.000 COP	$899.000 COP	Agencia, clínica, inmobiliaria, educación	Todo Piloto + agente IA entrenado, calificación, agenda, handoff humano, hasta 3 flujos
+Scale	$5.900.000 COP	$1.690.000 COP	Empresa con equipo comercial	Todo Growth + automatizaciones, dashboard, SLA, múltiples fuentes de conocimiento, optimización mensual
+
+Los cobros de mensajes de Meta deben ir por separado y transparentes, con una bolsa incluida limitada o bajo consumo. No los absorbas ilimitadamente: WhatsApp cobra por mensajes de plantilla según categoría y país. Manychat explica el esquema vigente.
+Tu propuesta de valor diferencial:
+Implementación local y acompañada, en español y orientada a ventas.
+HubSpot conectado desde el primer día: contacto, negocio, etapa, origen, resumen y próxima acción.
+IA entrenada con catálogo, precios, casos de éxito y objeciones del cliente.
+Derivación a humano cuando haya intención alta o riesgo de una respuesta incorrecta.
+Métricas comerciales: leads, tasa de calificación, citas y oportunidades creadas.
+Comparación:
+Alternativa	Precio público orientativo	Debilidad frente a tu oferta
+Manychat Pro	US$29/mes anual para 2.500 contactos activos	Es una plataforma autoservicio; el cliente configura y opera. Fuente
+Wati	Suscripción + consumo de Meta	Ofrece API oficial e inbox, pero la personalización comercial profunda es trabajo adicional. Fuente
+Respond.io	Enfocado en operación omnicanal y equipos	Más robusto, pero menos accesible para una pyme que busca implementación llave en mano. Fuente
+Proveedores colombianos básicos	~$150k–$500k COP/mes	Normalmente venden agenda, FAQ o pedidos; no HubSpot + proceso comercial diseñado a medida.
+Agencia enterprise	$6M+ implementación y mensualidades altas	Más lenta y costosa; tu ventaja es velocidad y especialización vertical.
+
+Modelo financiero recomendado:
+Inversión inicial MVP comercial: $18M–$30M COP.Producto y hardening: $10M–$16M.
+Diseño, marca, sitio y demos: $3M–$5M.
+Legal, privacidad, infraestructura y caja comercial: $5M–$9M.
+
+Costos fijos mensuales iniciales: $3M–$5M COP entre ventas, soporte, nube, monitoreo y herramientas.
+Margen bruto objetivo: 65–75%, siempre que el costo de IA y WhatsApp esté limitado por plan.
+Punto de equilibrio: aproximadamente 7 clientes Growth equivalentes si cada uno aporta ~$600k COP de margen mensual.
+Ejemplo de objetivo del primer año: llegar a 15 clientes activos, con mezcla de planes y ticket promedio de $850.000 COP/mes. Eso da cerca de $12,75M COP de MRR, más implementaciones iniciales. No apuntaría de entrada a 20 clientes: primero valida que realmente aumentas citas, velocidad de respuesta o conversión.
+Dos cambios técnicos importantes antes de comercializar:
+Sustituye whatsapp-web.js por la API oficial de WhatsApp Business / Cloud API. Es más apropiada para un SaaS y reduce el riesgo operativo de depender de una sesión QR.
+No vendas “Ollama local” como principal beneficio. Vende privacidad, control y costo predecible. Para pocos clientes, una IA local necesita infraestructura GPU y monitoreo; conviene usar un modelo compartido con límites, y dejar instancia dedicada como add-on empresarial.
+HubSpot Free funciona como excelente puerta de entrada, pero actualmente tiene límites de 2 usuarios y 1.000 contactos gratuitos; el plan debe prever upgrades que paga el cliente directamente. HubSpot.
+Tu nicho inicial más prometedor: clínicas estéticas, inmobiliarias, educación/academias, abogados y agencias de marketing. Todos dependen de WhatsApp, pierden leads por demora y pueden medir fácilmente el valor del bot en citas u oportunidades.
+La oferta de lanzamiento que usaría: “Implementamos en 14 días un agente que responde 24/7, califica leads y crea oportunidades en HubSpot; si no genera al menos X conversaciones calificadas en 60 días, extendemos la optimización sin costo.”
+
+
+9:00 PM
+
+
+
+
+
+
+puede ser whatsapa + ia o un boot  + ia 
+
+
+
+
+
+
+9:04 PM
+
+
+
+
+
+
+Sí. Puedes ofrecer ambas versiones bajo el mismo producto:
+Producto	Qué hace	Ideal para
+Bot web + IA	Chat en landing/web, califica leads y los crea en HubSpot	Empresas que reciben tráfico desde anuncios y páginas web
+WhatsApp + IA	Atiende, califica y agenda desde WhatsApp	Negocios que venden principalmente por chat
+Omnicanal + IA	Une webchat, WhatsApp y HubSpot en una sola conversación comercial	Empresas con mayor volumen y equipo de ventas
+
+Mi recomendación: empieza con bot web + IA como MVP. Es más rápido de implementar, no requiere verificación de Meta ni genera costos por mensajes. Después agregas WhatsApp como add-on premium.
+Precios ajustados:
+Bot web + IA: implementación $990.000–$1.490.000 COP; mensualidad $349.000–$599.000 COP.
+WhatsApp + IA: implementación $1.490.000–$2.490.000 COP; mensualidad $599.000–$999.000 COP, más consumo de Meta.
+Omnicanal: implementación desde $2.990.000 COP; mensualidad desde $1.290.000 COP.
+Así no dependes solo de WhatsApp y puedes vender una opción accesible a clientes que todavía no tienen API oficial.

@@ -91,6 +91,7 @@ tr:hover td{background:#f8fafc}
 
   <div class="tabs">
     <button class="tab active" data-tab="conversations">Conversaciones</button>
+    <button class="tab" data-tab="handoffs">Handoffs</button>
     <button class="tab" data-tab="leads">Leads</button>
   </div>
 
@@ -99,6 +100,15 @@ tr:hover td{background:#f8fafc}
       <table>
         <thead><tr><th>Canal</th><th>Contacto</th><th>Último mensaje</th><th>Mensajes</th><th>Última actividad</th></tr></thead>
         <tbody id="conv-tbody"><tr><td colspan="5" class="empty">Cargando...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-handoffs">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Canal</th><th>Contacto</th><th>Motivo</th><th>Confianza</th><th>Mensajes</th><th>Última actividad</th><th>Acción</th></tr></thead>
+        <tbody id="handoff-tbody"><tr><td colspan="7" class="empty">Cargando...</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -159,6 +169,32 @@ function renderConversations(convs) {
   }).join('');
 }
 
+function renderHandoffs(handoffs) {
+  const tb = $('handoff-tbody');
+  if (!handoffs || handoffs.length === 0) { tb.innerHTML = '<tr><td colspan="7" class="empty">Sin handoffs pendientes</td></tr>'; return; }
+  tb.innerHTML = handoffs.map(h => {
+    const ctx = h.context || {};
+    const channelBadge = h.channel === 'whatsapp' ? '<span class="badge badge-whatsapp">WhatsApp</span>' : '<span class="badge badge-web">Web</span>';
+    const contact = h.phone || h.contact_id || 'Anónimo';
+    return `<tr><td>${channelBadge}</td>
+      <td class="clickable" onclick="openConversation('${h.id}')">${esc(contact)}</td>
+      <td>${esc(ctx.handoffReason || '—')}</td>
+      <td>${ctx.handoffConfidence ? Math.round(ctx.handoffConfidence * 100) + '%' : '—'}</td>
+      <td>${h.message_count || 0}</td>
+      <td>${formatTime(h.updated_at)}</td>
+      <td><button class="refresh-btn" onclick="assignHandoff('${h.id}')" style="padding:4px 12px;font-size:12px">Asignarme</button></td></tr>`;
+  }).join('');
+}
+
+async function assignHandoff(id) {
+  try {
+    await fetch('/api/dashboard/handoffs/' + id + '/assign', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({assignedTo:'Agente'}) });
+    loadAll();
+  } catch (e) {
+    alert('Error al asignar handoff');
+  }
+}
+
 function renderLeads(leads) {
   const tb = $('leads-tbody');
   if (!leads || leads.length === 0) { tb.innerHTML = '<tr><td colspan="5" class="empty">Sin leads capturados</td></tr>'; return; }
@@ -186,13 +222,15 @@ function updateStatus(ollama, db) {
 
 async function loadAll() {
   try {
-    const [stats, convs, leads] = await Promise.all([
+    const [stats, convs, handoffs, leads] = await Promise.all([
       fetchJSON('/api/dashboard/stats'),
       fetchJSON('/api/dashboard/conversations'),
+      fetchJSON('/api/dashboard/handoffs'),
       fetchJSON('/api/dashboard/leads'),
     ]);
     renderStats(stats);
     renderConversations(convs);
+    renderHandoffs(handoffs);
     renderLeads(leads);
     updateStatus(true, true);
   } catch (e) {

@@ -141,6 +141,31 @@ function createStore() {
     return result.rows;
   }
 
+  async function getHandoffSessions() {
+    const result = await query(`
+      SELECT s.id, s.channel, s.phone, s.contact_id, s.context,
+             s.created_at, s.updated_at,
+             (SELECT content FROM messages WHERE session_id = s.id ORDER BY created_at DESC LIMIT 1) as last_message,
+             (SELECT COUNT(*) FROM messages WHERE session_id = s.id) as message_count
+      FROM sessions s
+      WHERE s.is_active = true AND s.context->>'handoffNeeded' = 'true'
+        AND (s.context->>'handoffAssignedTo' IS NULL OR s.context->>'handoffAssignedTo' = '')
+      ORDER BY s.updated_at DESC
+    `);
+    return result.rows;
+  }
+
+  async function assignHandoff(sessionId, assignedTo) {
+    const session = await query('SELECT context FROM sessions WHERE id = $1', [sessionId]);
+    if (session.rows.length === 0) throw new Error('Sesión no encontrada');
+    const context = session.rows[0].context || {};
+    context.handoffAssignedTo = assignedTo;
+    context.handoffAssignedAt = new Date().toISOString();
+    await query('UPDATE sessions SET context = $1::jsonb, updated_at = NOW() WHERE id = $2',
+      [JSON.stringify(context), sessionId]);
+    logger.info('Handoff assigned', { sessionId, assignedTo });
+  }
+
   async function getStats() {
     const result = await query(`
       SELECT
@@ -154,7 +179,8 @@ function createStore() {
   }
 
   return { migrate, pool, getOrCreateSession, addMessage, getConversationHistory,
-    updateSessionContext, saveContact, getActiveConversations, getConversationById, getLeads, getStats };
+    updateSessionContext, saveContact, getActiveConversations, getConversationById, getLeads, getStats,
+    getHandoffSessions, assignHandoff };
 }
 
 module.exports = { createStore };

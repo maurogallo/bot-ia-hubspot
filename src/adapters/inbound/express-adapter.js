@@ -64,8 +64,8 @@ footer{position:fixed;bottom:0;left:0;right:0;padding:12px;background:#fff;borde
     if (!message || !from) return res.status(400).json({ error: 'Los campos "message" y "from" son obligatorios' });
     if (typeof message !== 'string' || message.length > 4000) return res.status(400).json({ error: 'Mensaje demasiado largo' });
     try {
-      const reply = await deps.handleMessage({ message, from, channel, store: deps.store, ai: deps.ai, crm: deps.crm });
-      res.json({ reply });
+      const result = await deps.handleMessage({ message, from, channel, store: deps.store, ai: deps.ai, crm: deps.crm });
+      res.json({ reply: result.response, handoffNeeded: result.handoffNeeded });
     } catch (error) {
       logger.error('Webhook error', { error: error.message });
       res.status(500).json({ error: 'Error interno del servidor' });
@@ -146,6 +146,27 @@ footer{position:fixed;bottom:0;left:0;right:0;padding:12px;background:#fff;borde
     } catch (error) {
       logger.error('Dashboard leads error', { error: error.message });
       res.status(500).json({ error: 'Error al obtener leads' });
+    }
+  });
+
+  app.get('/api/dashboard/handoffs', async (req, res) => {
+    try {
+      const handoffs = await deps.store.getHandoffSessions();
+      res.json(handoffs);
+    } catch (error) {
+      logger.error('Dashboard handoffs error', { error: error.message });
+      res.status(500).json({ error: 'Error al obtener handoffs' });
+    }
+  });
+
+  app.post('/api/dashboard/handoffs/:id/assign', async (req, res) => {
+    try {
+      const { assignedTo } = req.body;
+      await deps.store.assignHandoff(req.params.id, assignedTo || 'Agente');
+      res.json({ success: true });
+    } catch (error) {
+      logger.error('Dashboard assign handoff error', { error: error.message });
+      res.status(500).json({ error: 'Error al asignar handoff' });
     }
   });
 
