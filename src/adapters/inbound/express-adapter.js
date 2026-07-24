@@ -80,7 +80,7 @@ footer{position:fixed;bottom:0;left:0;right:0;padding:12px;background:#fff;borde
 <h1>${config.business.name}</h1>
 <div class="card">Bot con IA local + HubSpot CRM</div>
 <footer>Ollama + HubSpot</footer>
-<script src="/widget.js" data-business="${config.business.name}" data-primary="#2563eb"></script>
+<script src="/widget.js" data-business="${config.business.name}" data-primary="#2563eb"${config.webhookSecret ? ` data-webhook-secret="${config.webhookSecret}"` : ''}></script>
 </body></html>`);
   });
 
@@ -89,7 +89,20 @@ footer{position:fixed;bottom:0;left:0;right:0;padding:12px;background:#fff;borde
     res.json({ status: 'ok', timestamp: new Date().toISOString(), ollama: ollamaHealth, uptime: process.uptime(), embeddingModel: config.ollama.embeddingModel });
   });
 
-  app.post('/api/webhook', async (req, res) => {
+  function verifyWebhookSignature(req, res, next) {
+    const secret = config.webhookSecret;
+    if (!secret) return next();
+    const signature = req.headers['x-webhook-signature'];
+    if (!signature) return res.status(401).json({ error: 'Firma HMAC requerida' });
+    const rawBody = JSON.stringify(req.body);
+    const expected = crypto.createHmac('sha256', secret).update(rawBody).digest('hex');
+    if (signature.length !== 64 || !crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) {
+      return res.status(401).json({ error: 'Firma HMAC inválida' });
+    }
+    next();
+  }
+
+  app.post('/api/webhook', verifyWebhookSignature, async (req, res) => {
     const { message, from, channel = 'web' } = req.body;
     if (!message || !from) return res.status(400).json({ error: 'Los campos "message" y "from" son obligatorios' });
     if (typeof message !== 'string' || message.length > 4000) return res.status(400).json({ error: 'Mensaje demasiado largo' });

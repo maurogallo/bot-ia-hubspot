@@ -4,6 +4,7 @@
     welcome: document.currentScript.getAttribute('data-welcome') || '¡Hola! Soy el asistente virtual. ¿En qué puedo ayudarte?',
     primary: document.currentScript.getAttribute('data-primary') || '#2563eb',
     apiUrl: document.currentScript.getAttribute('data-api-url') || '/api/webhook',
+    webhookSecret: document.currentScript.getAttribute('data-webhook-secret') || '',
   };
 
   var visitorId = localStorage.getItem('nw_visitor_id');
@@ -91,6 +92,14 @@
   var typingEl = document.getElementById('nw-typing');
   var triggerBtn = document.getElementById('nw-btn');
 
+  async function hmacSign(data, secret) {
+    if (!secret) return '';
+    var enc = new TextEncoder();
+    var key = await crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    var sig = await crypto.subtle.sign('HMAC', key, enc.encode(data));
+    return Array.from(new Uint8Array(sig)).map(function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+  }
+
   function formatTime() { return new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }); }
 
   function addMessage(text, role) {
@@ -104,7 +113,7 @@
 
   function setTyping(show) { typingEl.style.display = show ? 'flex' : 'none'; messagesEl.scrollTop = messagesEl.scrollHeight; }
 
-  function sendMessage() {
+  async function sendMessage() {
     var text = input.value.trim();
     if (!text) return;
     input.value = '';
@@ -112,10 +121,14 @@
     sendBtn.disabled = true;
     setTyping(true);
 
+    var body = JSON.stringify({ message: text, from: visitorId, channel: 'web' });
+    var headers = { 'Content-Type': 'application/json' };
+    if (cfg.webhookSecret) headers['X-Webhook-Signature'] = await hmacSign(body, cfg.webhookSecret);
+
     fetch(cfg.apiUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: text, from: visitorId, channel: 'web' })
+      headers: headers,
+      body: body
     })
     .then(function (res) {
       if (!res.ok) throw new Error('Error ' + res.status);

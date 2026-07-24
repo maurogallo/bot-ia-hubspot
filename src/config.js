@@ -48,6 +48,8 @@ const config = {
     username: process.env.DASHBOARD_USERNAME || '',
     password: process.env.DASHBOARD_PASSWORD || '',
   },
+
+  webhookSecret: process.env.WEBHOOK_SECRET || '',
 };
 
 module.exports = config;
