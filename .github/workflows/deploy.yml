@@ -11,6 +11,10 @@ on:
         options: [staging, prod]
         default: staging
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
