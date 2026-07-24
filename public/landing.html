@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<title>NeoWeb Studio — Automatización Inteligente</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:#0b0f1a;color:#f1f5f9;line-height:1.6;-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{font-family:'Space Grotesk',sans-serif;font-weight:700;letter-spacing:-.02em}
+.container{max-width:1100px;margin:0 auto;padding:0 24px}
+
+/* Nav */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(11,15,26,.85);backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,.05)}
+nav .container{display:flex;align-items:center;justify-content:space-between;height:64px}
+.logo{font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:20px;color:#fff;letter-spacing:-.03em}
+.logo span{color:#00FF66}
+.nav-links{display:flex;gap:32px;align-items:center}
+.nav-links a{color:#94a3b8;text-decoration:none;font-size:14px;font-weight:500;transition:color .2s}
+.nav-links a:hover{color:#fff}
+.nav-cta{background:#00FF66;color:#0b0f1a;padding:10px 24px;border-radius:8px;font-weight:600;font-size:14px;text-decoration:none;transition:opacity .2s}
+.nav-cta:hover{opacity:.9}
+
+/* Hero */
+.hero{position:relative;padding:140px 0 80px;text-align:center;overflow:hidden}
+.hero-bg{position:absolute;top:-120px;left:50%;translate:-50% 0;width:800px;height:800px;background:radial-gradient(circle,rgba(0,255,102,.06) 0%,transparent 70%);pointer-events:none}
+.hero-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(0,255,102,.08);border:1px solid rgba(0,255,102,.2);border-radius:100px;padding:6px 16px;font-size:13px;color:#00FF66;font-weight:500;margin-bottom:24px}
+.hero h1{font-size:clamp(36px,5vw,64px);color:#fff;margin-bottom:20px;line-height:1.1}
+.hero h1 span{background:linear-gradient(135deg,#00FF66,#00cc52);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{font-size:clamp(16px,2vw,20px);color:#94a3b8;max-width:600px;margin:0 auto 36px;font-weight:400}
+.hero-actions{display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
+.btn-primary{background:#00FF66;color:#0b0f1a;padding:16px 36px;border-radius:10px;font-weight:600;font-size:16px;text-decoration:none;transition:opacity .2s;cursor:pointer;border:none}
+.btn-primary:hover{opacity:.9}
+.btn-secondary{background:rgba(255,255,255,.06);color:#fff;padding:16px 36px;border-radius:10px;font-weight:600;font-size:16px;text-decoration:none;border:1px solid rgba(255,255,255,.1);transition:background .2s;cursor:pointer}
+.btn-secondary:hover{background:rgba(255,255,255,.1)}
+.hero-stats{display:flex;gap:48px;justify-content:center;margin-top:56px;flex-wrap:wrap}
+.stat{text-align:center}
+.stat-num{font-family:'Space Grotesk',sans-serif;font-size:32px;font-weight:800;color:#00FF66}
+.stat-label{font-size:13px;color:#64748b;margin-top:4px}
+
+/* Section */
+.section{padding:96px 0}
+.section-dark{background:#0d1220}
+.section-header{text-align:center;margin-bottom:56px}
+.section-header h2{font-size:clamp(28px,3vw,40px);color:#fff;margin-bottom:12px}
+.section-header p{color:#64748b;font-size:16px;max-width:500px;margin:0 auto}
+
+/* Services */
+.services-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px}
+.service-card{background:linear-gradient(135deg,#131a2e,#0d1220);border:1px solid rgba(0,255,102,.08);border-radius:16px;padding:36px;transition:transform .2s,border-color .2s;position:relative;overflow:hidden}
+.service-card:hover{transform:translateY(-2px);border-color:rgba(0,255,102,.2)}
+.service-card .glow{position:absolute;top:-60px;right:-60px;width:120px;height:120px;background:radial-gradient(circle,rgba(0,255,102,.04),transparent);pointer-events:none}
+.service-icon{font-size:32px;margin-bottom:16px}
+.service-card h3{font-size:20px;color:#fff;margin-bottom:4px}
+.service-card .price{color:#00FF66;font-weight:700;font-size:22px;margin-bottom:12px}
+.service-card p{color:#94a3b8;font-size:14px;line-height:1.7}
+.service-features{list-style:none;margin-top:16px;padding:0}
+.service-features li{font-size:13px;color:#64748b;padding:4px 0;display:flex;align-items:center;gap:8px}
+.service-features li::before{content:'✓';color:#00FF66;font-weight:700}
+
+/* How it works */
+.steps-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:32px;counter-reset:step}
+.step{text-align:center}
+.step-num{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#00FF66,#00cc52);color:#0b0f1a;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;margin:0 auto 16px;font-family:'Space Grotesk',sans-serif}
+.step h4{font-size:16px;color:#fff;margin-bottom:8px}
+.step p{font-size:13px;color:#64748b}
+
+/* Benefits */
+.benefits-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.benefit-item{display:flex;align-items:center;gap:12px;padding:18px 20px;background:#131a2e;border-radius:12px;border:1px solid rgba(255,255,255,.04);font-size:14px;color:#cbd5e1}
+.benefit-item .check{display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;background:rgba(0,255,102,.12);color:#00FF66;font-size:14px;flex-shrink:0}
+
+/* CTA */
+.cta-section{position:relative;text-align:center;padding:96px 24px;overflow:hidden}
+.cta-bg{position:absolute;top:50%;left:50%;translate:-50% -50%;width:600px;height:600px;background:radial-gradient(circle,rgba(0,255,102,.04),transparent 60%);pointer-events:none}
+.cta-section h2{font-size:clamp(28px,3vw,40px);color:#fff;margin-bottom:16px}
+.cta-section p{color:#94a3b8;font-size:16px;margin-bottom:36px;max-width:480px;margin-left:auto;margin-right:auto}
+
+/* Footer */
+footer{padding:32px 0;border-top:1px solid rgba(255,255,255,.04);text-align:center;font-size:13px;color:#475569}
+footer span{color:#00FF66}
+
+/* Mobile */
+@media(max-width:600px){
+  .nav-links{display:none}
+  .hero{padding:100px 0 48px}
+  .hero-stats{gap:24px}
+  .section{padding:48px 0}
+  .cta-section{padding:56px 24px}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <div class="logo"><span>✦</span> NeoWeb Studio</div>
+    <div class="nav-links">
+      <a href="#services">Servicios</a>
+      <a href="#how">Cómo funciona</a>
+      <a href="https://synaptiqnova.online/pos" target="_blank">FastAPIPOS</a>
+      <a href="#" class="nav-cta" onclick="document.getElementById('chat-btn')?.click();return false">Hablar con IA</a>
+    </div>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="container">
+    <div class="hero-badge">⚡ IA Local + HubSpot CRM</div>
+    <h1>Tu negocio <span>automatizado</span> con IA</h1>
+    <p>Capturá leads, calificalos con inteligencia artificial y registralos en HubSpot automáticamente. Sin costos de API, sin mensualidades.</p>
+    <div class="hero-actions">
+      <button class="btn-primary" onclick="document.getElementById('chat-btn')?.click()">Probar el bot ahora</button>
+      <a href="#services" class="btn-secondary">Ver servicios</a>
+    </div>
+    <div class="hero-stats">
+      <div class="stat"><div class="stat-num">24/7</div><div class="stat-label">Atención continua</div></div>
+      <div class="stat"><div class="stat-num">3s</div><div class="stat-label">Respuesta promedio</div></div>
+      <div class="stat"><div class="stat-num">100%</div><div class="stat-label">Tus datos seguros</div></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="services">
+  <div class="container">
+    <div class="section-header">
+      <h2>Servicios</h2>
+      <p>Soluciones modulares que se adaptan a tu negocio</p>
+    </div>
+    <div class="services-grid">
+      <div class="service-card">
+        <div class="glow"></div>
+        <div class="service-icon">🚀</div>
+        <h3>Landing Pages</h3>
+        <div class="price">$299</div>
+        <p>Páginas profesionales optimizadas para conversión con diseño moderno y responsive.</p>
+        <ul class="service-features">
+          <li>Diseño UI/UX profesional</li>
+          <li>Optimización SEO</li>
+          <li>Widget de chat IA incluido</li>
+          <li>Hosting 1 año gratis</li>
+        </ul>
+      </div>
+      <div class="service-card">
+        <div class="glow"></div>
+        <div class="service-icon">🌐</div>
+        <h3>Desarrollo Web</h3>
+        <div class="price">$799</div>
+        <p>Sitios web completos con panel administrativo, base de datos y bot IA integrado.</p>
+        <ul class="service-features">
+          <li>Frontend + Backend</li>
+          <li>Panel administrador</li>
+          <li>Base de datos incluida</li>
+          <li>Bot IA + HubSpot CRM</li>
+        </ul>
+      </div>
+      <div class="service-card">
+        <div class="glow"></div>
+        <div class="service-icon">⚡</div>
+        <h3>Automatización</h3>
+        <div class="price">$499</div>
+        <p>Chatbots con IA local, integración CRM y embudos de venta automatizados.</p>
+        <ul class="service-features">
+          <li>Chatbot IA personalizado</li>
+          <li>Integración HubSpot</li>
+          <li>WhatsApp + Web</li>
+          <li>Analíticas dashboard</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section section-dark" id="how">
+  <div class="container">
+    <div class="section-header">
+      <h2>Cómo funciona</h2>
+      <p>Del anuncio al lead en HubSpot en segundos</p>
+    </div>
+    <div class="steps-grid">
+      <div class="step">
+        <div class="step-num">1</div>
+        <h4>Llega un visitante</h4>
+        <p>Desde Instagram, Facebook, TikTok o tu web</p>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <h4>El bot IA lo atiende</h4>
+        <p>Califica, responde dudas y captura datos del cliente</p>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <h4>Lead en HubSpot</h4>
+        <p>Se registra automáticamente en tu CRM</p>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <h4>Vendé más</h4>
+        <p>Tu equipo recibe leads calificados listos para cerrar</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <h2>¿Por qué NeoWeb Studio?</h2>
+    </div>
+    <div class="benefits-grid">
+      <div class="benefit-item"><span class="check">✓</span> Atención 24/7 con IA local</div>
+      <div class="benefit-item"><span class="check">✓</span> Leads directo a HubSpot CRM</div>
+      <div class="benefit-item"><span class="check">✓</span> Sin costos de API externa</div>
+      <div class="benefit-item"><span class="check">✓</span> WhatsApp + Web integrados</div>
+      <div class="benefit-item"><span class="check">✓</span> Tus datos 100% seguros</div>
+      <div class="benefit-item"><span class="check">✓</span> Soporte técnico incluido</div>
+    </div>
+  </div>
+</section>
+
+<section class="cta-section">
+  <div class="cta-bg"></div>
+  <h2>Probá el bot ahora</h2>
+  <p>Conversá con nuestro asistente IA. Sin registro, sin esperas, sin compromiso.</p>
+  <button class="btn-primary" onclick="document.getElementById('chat-btn')?.click()">Comenzar →</button>
+</section>
+
+<footer>
+  <p><span>✦</span> NeoWeb Studio — Automatización Inteligente para tu Negocio</p>
+</footer>
+
+<script src="/widget.js" data-business="NeoWeb Studio" data-primary="#00FF66"></script>
+</body>
+</html>

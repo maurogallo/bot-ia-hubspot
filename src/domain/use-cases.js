@@ -1,3 +1,15 @@
+const logger = require('../logger');
+
+function extractMemoryFacts(leadData, message) {
+  const facts = {};
+  if (leadData.lead?.name) facts.contact_name = leadData.lead.name;
+  if (leadData.lead?.email) facts.contact_email = leadData.lead.email;
+  if (leadData.lead?.phone) facts.contact_phone = leadData.lead.phone;
+  if (leadData.lead?.service_interest) facts.service_interest = leadData.lead.service_interest;
+  if (leadData.detected_service && leadData.detected_service !== 'unknown') facts.detected_service = leadData.detected_service;
+  return facts;
+}
+
 const HANDOFF_KEYWORDS = [
   'hablar con un humano', 'hablar con humano', 'asesor personal', 'persona real',
   'hablar con un asesor', 'atención personal', 'que me llame', 'contáctame',
@@ -19,15 +31,37 @@ async function handleMessage({ message, from, channel, store, ai, crm }) {
   const forceHandoff = detectHandoffInMessage(message);
 
   const history = await store.getConversationHistory(session.id);
-  const { response, leadData } = await ai.generateResponse(session.id, history);
+  const memory = typeof store.getMemory === 'function' ? await store.getMemory(session.id) : {};
+
+  let knowledgeDocs = [];
+  if (typeof ai.generateEmbedding === 'function' && typeof store.searchKnowledge === 'function') {
+    try {
+      const embedding = await ai.generateEmbedding(message);
+      knowledgeDocs = await store.searchKnowledge(embedding, 3);
+    } catch (err) {
+      logger.warn('RAG knowledge search failed', { error: err.message, sessionId: session.id });
+    }
+  }
+
+  const { response, leadData } = await ai.generateResponse(session.id, history, memory, knowledgeDocs);
 
   await store.addMessage(session.id, 'assistant', response, { leadData });
 
+  if (typeof store.upsertMemory === 'function') {
+    const facts = extractMemoryFacts(leadData, message);
+    for (const [key, value] of Object.entries(facts)) {
+      if (value) await store.upsertMemory(session.id, key, value);
+    }
+  }
+
   const isHandoff = forceHandoff || leadData.intent === 'handoff';
 
-  if (leadData.intent === 'lead' && leadData.lead?.email) {
+  const hasLeadInfo = leadData.lead?.email && (leadData.intent === 'lead' || leadData.confidence >= 0.7);
+
+  if (hasLeadInfo) {
+    let contact = null;
     try {
-      const contact = await crm.getOrCreateContact(leadData.lead.email, {
+      contact = await crm.getOrCreateContact(leadData.lead.email, {
         name: leadData.lead.name || undefined,
         phone: leadData.lead.phone || from,
       });
@@ -40,6 +74,19 @@ async function handleMessage({ message, from, channel, store, ai, crm }) {
       });
     } catch (err) {
       throw err;
+    }
+    if (contact) {
+      try {
+        const dealName = leadData.lead?.service_interest
+          ? `Lead ${leadData.lead.name || leadData.lead.email} - ${leadData.lead.service_interest}`
+          : `Lead ${leadData.lead.name || leadData.lead.email}`;
+        await crm.createDeal(contact.id, dealName, null, {
+          pipeline: 'default',
+          dealstage: 'appointmentscheduled',
+        });
+      } catch (err) {
+        logger.error('Deal creation failed', { error: err.message, email: leadData.lead.email });
+      }
     }
   }
 

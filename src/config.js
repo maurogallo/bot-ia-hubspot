@@ -2,7 +2,7 @@ const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '..', '.env') });
 
 const config = {
-  port: parseInt(process.env.PORT, 10) || 3099,
+  port: parseInt(process.env.PORT, 10) || 3090,
   nodeEnv: process.env.NODE_ENV || 'development',
 
   db: {
@@ -17,7 +17,7 @@ const config = {
   hubspot: {
     clientId: process.env.HUBSPOT_CLIENT_ID,
     clientSecret: process.env.HUBSPOT_CLIENT_SECRET,
-    redirectUri: process.env.HUBSPOT_REDIRECT_URI || 'http://localhost:3099/oauth/callback',
+    redirectUri: process.env.HUBSPOT_REDIRECT_URI || 'http://localhost:3090/oauth/callback',
     accessToken: process.env.HUBSPOT_ACCESS_TOKEN,
     refreshToken: process.env.HUBSPOT_REFRESH_TOKEN,
   },
@@ -27,6 +27,7 @@ const config = {
     model: process.env.OLLAMA_MODEL || 'llama3',
     temperature: parseFloat(process.env.OLLAMA_TEMPERATURE) || 0.7,
     maxTokens: parseInt(process.env.OLLAMA_MAX_TOKENS, 10) || 1024,
+    embeddingModel: process.env.OLLAMA_EMBEDDING_MODEL || 'nomic-embed-text',
   },
 
   whatsapp: {
@@ -41,6 +42,11 @@ const config = {
   rateLimit: {
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS, 10) || 60000,
     max: parseInt(process.env.RATE_LIMIT_MAX, 10) || 30,
+  },
+
+  dashboard: {
+    username: process.env.DASHBOARD_USERNAME || '',
+    password: process.env.DASHBOARD_PASSWORD || '',
   },
 };
 

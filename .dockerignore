@@ -1,8 +1,10 @@
 node_modules
 .git
-.env
+.env*
 logs
 whatsapp-session
 whatsapp-qr.txt
 *.md
 .gitignore
+.github
+docker-compose*.yml

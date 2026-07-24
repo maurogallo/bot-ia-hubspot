@@ -8,7 +8,8 @@ Los cobros de mensajes de Meta deben ir por separado y transparentes, con una bo
 Tu propuesta de valor diferencial:
 Implementación local y acompañada, en español y orientada a ventas.
 HubSpot conectado desde el primer día: contacto, negocio, etapa, origen, resumen y próxima acción.
-IA entrenada con catálogo, precios, casos de éxito y objeciones del cliente.
+HubSpot conectado desde el primer día: contacto, negocio, etapa, origen, resumen y próxima acción.
+IA entrenada con catálogo, precios, casos de éxito y objecioes del cliente.
 Derivación a humano cuando haya intención alta o riesgo de una respuesta incorrecta.
 Métricas comerciales: leads, tasa de calificación, citas y oportunidades creadas.
 Comparación:

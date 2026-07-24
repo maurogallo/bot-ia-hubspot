@@ -1,6 +1,6 @@
 const logger = require('./logger');
 const config = require('./config');
-const { app, store, whatsapp } = require('./app');
+const { app, store, whatsapp, seedKnowledge } = require('./app');
 
 let server;
 
@@ -14,6 +14,7 @@ async function start() {
   try {
     await store.migrate();
     logger.info('Database migrated');
+    if (typeof seedKnowledge === 'function') await seedKnowledge();
   } catch (error) {
     logger.error('Database connection failed', { error: error.message });
     process.exit(1);

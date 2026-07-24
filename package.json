@@ -5,10 +5,22 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "node --watch src/server.js"
+    "dev": "node --watch src/server.js",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --forceExit",
+    "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
+    "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage --forceExit"
   },
-  "keywords": ["chatbot", "whatsapp", "hubspot", "ollama", "ai"],
+  "keywords": [
+    "chatbot",
+    "whatsapp",
+    "hubspot",
+    "ollama",
+    "ai"
+  ],
   "license": "ISC",
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
   "dependencies": {
     "axios": "^1.7.2",
     "cors": "^2.8.5",

@@ -1,0 +1,15 @@
+services:
+  bot:
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        rm -rf /tmp/org.chromium.Chromium.* /app/whatsapp-session/session/Singleton* /app/whatsapp-session/Singleton*
+        find /app/whatsapp-session -name 'Singleton*' -delete 2>/dev/null
+        find /app/whatsapp-session -name 'LOCK' -delete 2>/dev/null
+        exec node --watch src/server.js
+    volumes:
+      - ./src:/app/src
+      - ./public:/app/public
+    environment:
+      NODE_ENV: development
+      LOG_LEVEL: debug

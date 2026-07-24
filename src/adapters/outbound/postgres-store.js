@@ -42,6 +42,18 @@ function createStore() {
         CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at);
         CREATE INDEX IF NOT EXISTS idx_sessions_phone ON sessions(phone);
         CREATE INDEX IF NOT EXISTS idx_sessions_updated_at ON sessions(updated_at);
+
+        CREATE EXTENSION IF NOT EXISTS vector;
+        CREATE TABLE IF NOT EXISTS knowledge (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          content TEXT NOT NULL,
+          metadata JSONB DEFAULT '{}',
+          embedding vector(768),
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_knowledge_embedding
+          ON knowledge USING hnsw (embedding vector_cosine_ops)
+          WITH (m = 16, ef_construction = 64);
       `);
       logger.info('Database migrations completed');
     } catch (err) { logger.error('Migration failed', { error: err.message }); throw err; }
@@ -178,9 +190,67 @@ function createStore() {
     return result.rows[0];
   }
 
+  async function getSession(sessionId) {
+    const result = await query('SELECT * FROM sessions WHERE id = $1', [sessionId]);
+    return result.rows[0] || null;
+  }
+
+  async function upsertMemory(sessionId, key, value) {
+    const session = await getSession(sessionId);
+    if (!session) return;
+    const context = session.context || {};
+    if (!context.memory) context.memory = {};
+    context.memory[key] = value;
+    await query('UPDATE sessions SET context = $1::jsonb, updated_at = NOW() WHERE id = $2',
+      [JSON.stringify(context), sessionId]);
+  }
+
+  async function getMemory(sessionId) {
+    const session = await getSession(sessionId);
+    return session?.context?.memory || {};
+  }
+
+  async function getKnowledgeCount() {
+    const result = await query('SELECT COUNT(*) FROM knowledge');
+    return parseInt(result.rows[0].count, 10);
+  }
+
+  function formatVector(embedding) {
+    if (Array.isArray(embedding)) return '[' + embedding.join(',') + ']';
+    return embedding;
+  }
+
+  async function addKnowledge(content, metadata = {}, embedding) {
+    const result = await query(
+      'INSERT INTO knowledge (content, metadata, embedding) VALUES ($1, $2::jsonb, $3::vector) RETURNING id, content, metadata, created_at',
+      [content, JSON.stringify(metadata), formatVector(embedding)]
+    );
+    return result.rows[0];
+  }
+
+  async function searchKnowledge(embedding, limit = 3) {
+    const result = await query(
+      `SELECT content, metadata, 1 - (embedding <=> $1::vector) as similarity
+       FROM knowledge WHERE embedding IS NOT NULL
+       ORDER BY embedding <=> $1::vector LIMIT $2`,
+      [formatVector(embedding), limit]
+    );
+    return result.rows;
+  }
+
+  async function getAllKnowledge() {
+    const result = await query('SELECT id, content, metadata, created_at FROM knowledge ORDER BY created_at ASC');
+    return result.rows;
+  }
+
+  async function deleteKnowledge(id) {
+    await query('DELETE FROM knowledge WHERE id = $1', [id]);
+  }
+
   return { migrate, pool, getOrCreateSession, addMessage, getConversationHistory,
     updateSessionContext, saveContact, getActiveConversations, getConversationById, getLeads, getStats,
-    getHandoffSessions, assignHandoff };
+    getHandoffSessions, assignHandoff, getSession, upsertMemory, getMemory,
+    getKnowledgeCount, addKnowledge, searchKnowledge, getAllKnowledge, deleteKnowledge };
 }
 
 module.exports = { createStore };
