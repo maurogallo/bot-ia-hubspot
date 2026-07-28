@@ -24,7 +24,7 @@ const config = {
 
   ollama: {
     baseUrl: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
-    model: process.env.OLLAMA_MODEL || 'qwen2:1.5b',
+    model: process.env.OLLAMA_MODEL || 'llama3.2:3b',
     temperature: parseFloat(process.env.OLLAMA_TEMPERATURE) || 0.7,
     maxTokens: parseInt(process.env.OLLAMA_MAX_TOKENS, 10) || 512,
     embeddingModel: process.env.OLLAMA_EMBEDDING_MODEL || 'nomic-embed-text',
