@@ -1,10 +1,12 @@
 require('express-async-errors');
 const logger = require('./logger');
+const config = require('./config');
 const { createStore } = require('./adapters/outbound/postgres-store');
 const { createProvider: createAI } = require('./adapters/outbound/ollama-provider');
 const { createProvider: createCRM } = require('./adapters/outbound/hubspot-provider');
 const { createApp } = require('./adapters/inbound/express-adapter');
-const { createAdapter: createWhatsApp } = require('./adapters/inbound/whatsapp-adapter');
+const { createAdapter: createWebJSWA } = require('./adapters/inbound/whatsapp-adapter');
+const { createAdapter: createMetaWA } = require('./adapters/inbound/meta-whatsapp-adapter');
 const { handleMessage } = require('./domain/use-cases');
 
 const store = createStore();
@@ -44,8 +46,10 @@ async function seedKnowledge() {
 
 const deps = { store, ai, crm, handleMessage };
 
+const createWhatsApp = config.whatsapp.driver === 'meta' ? createMetaWA : createWebJSWA;
 const whatsapp = createWhatsApp(deps);
 deps.getQrCode = whatsapp.getQrCode;
+deps.metaHandleIncoming = whatsapp.handleIncoming;
 
 const app = createApp(deps);
 

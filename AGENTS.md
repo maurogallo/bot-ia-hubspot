@@ -200,18 +200,18 @@ No inventes información que no esté aquí.
 ## Roadmap (Issues)
 
 | # | Issue | Prioridad | Estado |
-|---|---|---|---|
+|---|---|---|---|---|
 | 1 | Dashboard web para monitorear conversaciones | Media | ✅ Completado |
 | 4 | Widget de chat web embebible para landing pages | Alta | ✅ Completado |
 | — | Landing página estilo FastApiPOS | Alta | ✅ Completado |
 | — | Modelo Ollama optimizado (llama3.2:3b) | Alta | ✅ Completado |
 | — | Deduplicación de mensajes WhatsApp | Alta | ✅ Completado |
 | — | Chromium lock fix permanente | Alta | ✅ Completado |
-| 2 | Meta WhatsApp Business API (alternativa producción) | Alta | 📝 Pendiente |
-| 3 | Tests automatizados (Jest, unitarios + integración) | Alta | 📝 Pendiente |
+| 2 | Meta WhatsApp Business API (alternativa producción) | Alta | ✅ Implementado |
+| 3 | Tests automatizados (Jest, unitarios + integración) | Alta | ✅ Completado (34 tests) |
 | 5 | Creación automática de deals en HubSpot | Media | ✅ Completado |
 | 6 | Analíticas de conversión y métricas | Media | 📝 Pendiente |
-| 7 | Verificación de firmas HMAC en webhooks | Alta | 📝 Pendiente |
+| 7 | Verificación de firmas HMAC en webhooks | Alta | ✅ Completado |
 | 8 | Soporte multilingüe (inglés, portugués) | Baja | 📝 Pendiente |
 | 9 | CI/CD con GitHub Actions | Alta | ✅ Completado |
 | 10 | Configuración de entornos (dev/staging/prod) | Alta | ✅ Completado |
@@ -254,14 +254,39 @@ El usuario solicitó PostgreSQL para producción. Las sesiones y mensajes requie
 - Índice HNSW nativo para búsqueda por similitud coseno
 - Unico stack de datos para simplificar backups y mantenimiento
 
+### Meta WhatsApp Business API
+- Implementado como adapter intercambiable via `WHATSAPP_DRIVER=webjs|meta` en config
+- `src/adapters/inbound/meta-whatsapp-adapter.js` — usa REST API de Graph Facebook
+- Envío: `POST /{phone-number-id}/messages` con token de acceso permanente
+- Recepción: webhook `GET /api/meta-webhook` (verificación challenge) y `POST /api/meta-webhook` (mensajes entrantes)
+- Deduplicación por `message.id` con Set rotativo (cleanup cada 60s)
+- Misma interfaz que whatsapp-web.js: `{ getClient, getQrCode, handleIncoming, sendMessage }`
+- Config: `META_PHONE_NUMBER_ID`, `META_ACCESS_TOKEN`, `META_VERIFY_TOKEN`
+
+### Subdomino y HTTPS (Cloudflare + Nginx)
+- `bot.synaptiqnova.online` apunta a `132.145.202.10` con Cloudflare proxy (nube naranja)
+- Nginx reverse proxy: puerto 80 (HTTP) y 443 (HTTPS) → `localhost:3099`
+- Certificado SSL: Cloudflare Origin CA (cubre `*.synaptiqnova.online`)
+- Root `/` sirve landing page de NeoWeb Studio
+- `/health` expone health check del bot
+
+### HMAC Webhook (Issue #7)
+- Middleware `verifyWebhookSignature` en express-adapter.js
+- Verifica firma HMAC-SHA256 del body si el header `X-Webhook-Signature` está presente
+- Si no hay header, permite el paso (compatibilidad con widget sin secret)
+- Widget.js firma automáticamente via Web Crypto API cuando tiene `data-webhook-secret`
+- Endpoints: `/api/meta-webhook` para webhook de Meta
+
 ## Endpoints
 
 | Ruta | Método | Descripción |
 |---|---|---|
-| `/` | GET | Landing page (estilo FastApiPOS) |
+| `/` | GET | Landing page (estilo NeoWeb Studio) |
 | `/health` | GET | Health check (incluye estado de Ollama y WhatsApp) |
 | `/api/status` | GET | Estado del servicio |
-| `/api/webhook` | POST | Webhook para chat web o integraciones externas |
+| `/api/webhook` | POST | Webhook para chat web (HMAC opcional) |
+| `/api/meta-webhook` | GET | Verificación challenge Meta WhatsApp |
+| `/api/meta-webhook` | POST | Mensajes entrantes Meta WhatsApp |
 | `/api/dashboard/*` | GET | API del dashboard (stats, conversations, leads, handoffs) |
 | `/dashboard` | GET | Dashboard web HTML |
 | `/widget/test` | GET | Página demo del widget |
@@ -292,7 +317,9 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.
 
 ### Producción
 ```bash
-# Crear .env.prod con las credenciales reales (NUNCA committear)
+# Copiar .env.prod a .env para que Docker Compose lo lea automáticamente
+cp .env.prod .env
+# O usar --env-file explícitamente
 docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod up -d
 ```
 

@@ -2,68 +2,51 @@ const axios = require('axios');
 const logger = require('../../logger');
 const config = require('../../config');
 
+const responseCache = new Map();
+const CACHE_MAX = 100;
+const CACHE_TTL = 60 * 60 * 1000;
+function getCacheKey(msg) { return msg.toLowerCase().replace(/[^a-záéíóúñü0-9\s]/g, '').trim(); }
+
 function buildSystemPrompt(memory = {}, knowledgeDocs = []) {
   const memoryBlock = Object.keys(memory).length > 0
-    ? `\n## INFORMACIÓN DEL CLIENTE (conversaciones previas)\n${Object.entries(memory).map(([k, v]) => `- ${k}: ${v}`).join('\n')}\nUsa esta información para no preguntar datos que ya te dieron.\n`
+    ? `\n## CLIENTE\n${Object.entries(memory).map(([k, v]) => `- ${k}: ${v}`).join('\n')}\n`
     : '';
   const knowledgeBlock = knowledgeDocs.length > 0
-    ? `\n## INFORMACIÓN DE LA EMPRESA (usa esto para responder con precisión)\n${knowledgeDocs.map((d, i) => `${i + 1}. ${d}`).join('\n')}\nUsa esta información para dar respuestas precisas sobre servicios, precios y procesos. No inventes información que no esté aquí.\n`
+    ? `\n## EMPRESA\n${knowledgeDocs.map((d, i) => `${i + 1}. ${d}`).join('\n')}\n`
     : '';
-  return `Eres un asesor comercial experto de ${config.business.name}, una agencia especializada en ${config.business.services}.${memoryBlock}${knowledgeBlock}
+  return `Eres asesor comercial de ${config.business.name} (${config.business.services}).${memoryBlock}${knowledgeBlock}
 
-## TU PERSONALIDAD
-- Profesional, amable y proactivo
-- Usas español neutro (tú)
-- Nunca inventes información que no conozcas
-- Si no sabes algo, di que lo consultarás con un especialista
+## PERSONALIDAD
+Profesional, amable, español neutro. No inventes información.
 
 ## SERVICIOS
-1. Landing Pages: páginas optimizadas para conversión. Desde $299 USD
-2. Desarrollo Web: sitios corporativos, tiendas online. Desde $799 USD
-3. Automatización: CRM, email marketing, chatbots. Desde $499 USD
+1. Landing Pages: desde $299 USD
+2. Desarrollo Web: desde $799 USD
+3. Automatización: desde $499 USD
 
-## FLUJO DE VENTAS
-1. Saluda, preséntate y pregunta el nombre de la persona
-2. Pregunta por su negocio y necesidad
-3. Identifica el servicio adecuado
-4. Propuesta personalizada con precio estimado
-5. Pide email y teléfono para enviarle la propuesta
-6. Ofrece agendar una reunión
+## FLUJO
+Saluda → pregunta nombre y necesidad → propone servicio → pide email/tel → agenda reunión
 
-## ESTRATEGIA
-- Escucha antes de proponer
-- Explica cómo cada servicio ayuda a su negocio
-- Sugiere upselling
-- Crea urgencia
-- Siempre obtené nombre, email y teléfono antes de finalizar
-- Pide la venta
-
-## REGLA CRÍTICA: DERIVACIÓN A HUMANO
-Debes usar SIEMPRE intent="handoff" en estos casos:
-- El usuario DICE EXPLÍCITAMENTE "hablar con un humano", "asesor personal", "persona real" o similar
-- El usuario PIDE agendar una reunión o llamada
-- El usuario PREGUNTA algo fuera de tus servicios
-- El usuario está LISTO PARA COMPRAR (alta intención de compra)
-
-Cuando uses handoff, responde cordialmente diciendo que un asesor lo contactará pronto y NO sigas preguntando. El INTENT debe ser "handoff".
+## DERIVACIÓN
+Usa intent="handoff" si: pide humano, quiere agendar, listo para comprar
 
 ## FORMATO
-Responde de forma natural. Al final incluye este bloque JSON exacto:
-
-[LEAD_DATA]
-{
-  "intent": "greeting|inquiry|lead|proposal|scheduling|handoff",
-  "detected_service": "landing_page|web_development|automation|unknown",
-  "lead": { "name": null, "email": null, "phone": null, "service_interest": null },
-  "actions": [],
-  "confidence": 0.0
-}
-[/LEAD_DATA]`;
+Responde natural. Termina con:
+[LEAD_DATA] { "intent": "greeting|inquiry|lead|proposal|handoff", "detected_service": "landing_page|web_development|automation|unknown", "lead": { "name": null, "email": null, "phone": null, "service_interest": null }, "confidence": 0.0 } [/LEAD_DATA]`;
 }
 
 function createProvider() {
   async function generateResponse(sessionId, conversationHistory, memory = {}, knowledgeDocs = []) {
     const knowledgeContents = knowledgeDocs.map(d => d.content || d);
+
+    const lastMsg = conversationHistory.length > 0 ? conversationHistory[conversationHistory.length - 1].content : '';
+    const cacheKey = getCacheKey(lastMsg);
+    const cached = responseCache.get(cacheKey);
+    if (cached && Date.now() - cached.ts < CACHE_TTL && conversationHistory.length <= 2 && !memory.contact_name) {
+      logger.info('Response cache hit', { sessionId, cacheKey });
+      return { response: cached.response, leadData: { ...cached.leadData } };
+    }
+
     const messages = [
       { role: 'system', content: buildSystemPrompt(memory, knowledgeContents) },
       ...conversationHistory.map(m => ({
@@ -90,7 +73,15 @@ function createProvider() {
         catch (e) { logger.warn('Failed to parse lead data', { error: e.message, sessionId }); }
       }
 
-      return { response: content.replace(/\s*\[LEAD_DATA\][\s\S]*?\[\/LEAD_DATA\]\s*/, '').trim(), leadData };
+      const cleanResponse = content.replace(/\s*\[LEAD_DATA\][\s\S]*?\[\/LEAD_DATA\]\s*/, '').trim();
+
+      if (responseCache.size >= CACHE_MAX) {
+        const firstKey = responseCache.keys().next().value;
+        responseCache.delete(firstKey);
+      }
+      responseCache.set(cacheKey, { response: cleanResponse, leadData, ts: Date.now() });
+
+      return { response: cleanResponse, leadData };
     } catch (error) {
       logger.error('Ollama request failed', { error: error.message, sessionId });
       if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') {

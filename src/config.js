@@ -24,14 +24,21 @@ const config = {
 
   ollama: {
     baseUrl: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
-    model: process.env.OLLAMA_MODEL || 'llama3',
+    model: process.env.OLLAMA_MODEL || 'qwen2:1.5b',
     temperature: parseFloat(process.env.OLLAMA_TEMPERATURE) || 0.7,
-    maxTokens: parseInt(process.env.OLLAMA_MAX_TOKENS, 10) || 1024,
+    maxTokens: parseInt(process.env.OLLAMA_MAX_TOKENS, 10) || 512,
     embeddingModel: process.env.OLLAMA_EMBEDDING_MODEL || 'nomic-embed-text',
   },
 
   whatsapp: {
     sessionPath: process.env.WHATSAPP_SESSION_PATH || './whatsapp-session',
+    driver: process.env.WHATSAPP_DRIVER || 'webjs',
+    meta: {
+      phoneNumberId: process.env.META_PHONE_NUMBER_ID || '',
+      accessToken: process.env.META_ACCESS_TOKEN || '',
+      verifyToken: process.env.META_VERIFY_TOKEN || 'bot-verify-token',
+      apiVersion: process.env.META_API_VERSION || 'v21.0',
+    },
   },
 
   business: {

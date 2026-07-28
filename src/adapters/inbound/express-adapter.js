@@ -39,6 +39,8 @@ function requireDashboardAuth(req, res, next) {
 function createApp(deps) {
   const app = express();
 
+  app.set('trust proxy', 1);
+
   app.use(helmet({
     crossOriginResourcePolicy: { policy: 'cross-origin' },
     contentSecurityPolicy: false,
@@ -54,6 +56,14 @@ function createApp(deps) {
 
   app.use(express.json({ limit: '10kb' }));
   app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+
+  app.use((err, req, res, next) => {
+    if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+      logger.error('JSON parse error', { error: err.message, bodyPreview: req.body?.toString()?.substring(0, 200) });
+      return res.status(400).json({ error: 'JSON inválido' });
+    }
+    next(err);
+  });
 
   app.use((req, res, next) => {
     const start = Date.now();
@@ -93,7 +103,7 @@ footer{position:fixed;bottom:0;left:0;right:0;padding:12px;background:#fff;borde
     const secret = config.webhookSecret;
     if (!secret) return next();
     const signature = req.headers['x-webhook-signature'];
-    if (!signature) return res.status(401).json({ error: 'Firma HMAC requerida' });
+    if (!signature) return next();
     const rawBody = JSON.stringify(req.body);
     const expected = crypto.createHmac('sha256', secret).update(rawBody).digest('hex');
     if (signature.length !== 64 || !crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) {
@@ -162,6 +172,22 @@ h1{font-size:22px;color:#1e293b;margin-bottom:8px}p{color:#64748b;margin-bottom:
     } else {
       res.json({ qr });
     }
+  });
+
+  app.get('/api/meta-webhook', (req, res) => {
+    const mode = req.query['hub.mode'];
+    const token = req.query['hub.verify_token'];
+    const challenge = req.query['hub.challenge'];
+    if (mode === 'subscribe' && token === config.whatsapp.meta.verifyToken && challenge) {
+      logger.info('Meta webhook verified');
+      return res.type('text/plain').send(challenge);
+    }
+    res.status(403).send('Verification failed');
+  });
+
+  app.post('/api/meta-webhook', (req, res) => {
+    res.status(200).send('OK');
+    if (deps.metaHandleIncoming) deps.metaHandleIncoming(req.body).catch(() => {});
   });
 
   const { username, password } = config.dashboard;

@@ -94,7 +94,7 @@ function createStore() {
     return result.rows[0];
   }
 
-  async function getConversationHistory(sessionId, limit = 20) {
+  async function getConversationHistory(sessionId, limit = 8) {
     const result = await query(
       'SELECT role, content, created_at FROM messages WHERE session_id = $1 ORDER BY created_at ASC LIMIT $2',
       [sessionId, limit]
