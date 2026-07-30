@@ -5,7 +5,7 @@ const config = require('../../config');
 const responseCache = new Map();
 const CACHE_MAX = 100;
 const CACHE_TTL = 60 * 60 * 1000;
-function getCacheKey(msg) { return msg.toLowerCase().replace(/[^a-záéíóúñü0-9\s]/g, '').trim(); }
+function getCacheKey(msg, tenantSlug) { return (tenantSlug || 'default') + ':' + msg.toLowerCase().replace(/[^a-záéíóúñü0-9\s]/g, '').trim(); }
 
 function buildSystemPrompt(memory = {}, knowledgeDocs = [], tenant = null, services = []) {
   const businessName = tenant?.business_name || config.business.name;
@@ -46,7 +46,7 @@ function createProvider() {
     const knowledgeContents = knowledgeDocs.map(d => d.content || d);
 
     const lastMsg = conversationHistory.length > 0 ? conversationHistory[conversationHistory.length - 1].content : '';
-    const cacheKey = getCacheKey(lastMsg);
+    const cacheKey = getCacheKey(lastMsg, tenant?.slug);
     const cached = responseCache.get(cacheKey);
     if (cached && Date.now() - cached.ts < CACHE_TTL && conversationHistory.length <= 2 && !memory.contact_name && cached.leadData.intent !== 'error') {
       logger.info('Response cache hit', { sessionId, cacheKey });
