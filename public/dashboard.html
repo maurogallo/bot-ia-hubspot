@@ -416,6 +416,17 @@ function goToWizardStep2() {
   var slug = $('f-slug').value.trim();
   var name = $('f-name').value.trim();
   if (!slug || !name) { alert('Slug y Nombre son obligatorios'); return; }
+
+  window._wizardData = {
+    slug: slug,
+    businessName: name,
+    businessServices: $('f-services').value,
+    plan: $('f-plan').value,
+    whatsappPhone: $('f-wa').value,
+    ownerName: $('f-owner').value,
+    ownerEmail: $('f-owner-email').value,
+  };
+
   $('clientModalTitle').textContent = 'Nuevo Cliente - Paso 2/3';
   $('clientModalBody').innerHTML =
     '<div style="display:flex;gap:4px;margin-bottom:12px"><span style="background:#22c55e;color:#fff;padding:4px 12px;border-radius:6px;font-size:12px;font-weight:600">Paso 1 ' + checkIcon() + '</span><span style="background:#2563eb;color:#fff;padding:4px 12px;border-radius:6px;font-size:12px;font-weight:600">Paso 2</span><span style="background:#f1f5f9;color:#64748b;padding:4px 12px;border-radius:6px;font-size:12px">Paso 3</span></div>' +
@@ -463,9 +474,8 @@ function renderWizardServices() {
 }
 
 async function finishWizard() {
-  var slug = $('f-slug').value.trim();
-  var name = $('f-name').value.trim();
-  if (!slug || !name) { alert('Slug y Nombre son obligatorios'); return; }
+  var data = window._wizardData;
+  if (!data || !data.slug || !data.businessName) { alert('Faltan datos del paso 1. Empeza de nuevo.'); return; }
 
   var features = {};
   if ($('w-feat-wa') && $('w-feat-wa').checked) features.whatsapp = true;
@@ -474,25 +484,25 @@ async function finishWizard() {
   if ($('w-feat-crm') && $('w-feat-crm').checked) features.crm = true;
   if ($('w-feat-kb') && $('w-feat-kb').checked) features.knowledgeBase = true;
 
-  var plan = $('f-plan') ? $('f-plan').value : 'starter';
+  var plan = data.plan || 'starter';
   if (features.scheduling || features.crm) plan = 'business';
   if (features.crm && features.scheduling && features.knowledgeBase) plan = 'pro';
 
   var body = {
-    slug: slug,
-    businessName: name,
-    businessServices: $('f-services').value,
+    slug: data.slug,
+    businessName: data.businessName,
+    businessServices: data.businessServices,
     plan: plan,
-    whatsappPhone: $('f-wa').value,
-    ownerName: $('f-owner').value,
-    ownerEmail: $('f-owner-email').value,
+    whatsappPhone: data.whatsappPhone,
+    ownerName: data.ownerName,
+    ownerEmail: data.ownerEmail,
     features: features,
   };
 
   try {
     await fetchJSON('/api/tenants', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
     var services = window._wizardServices || [];
-    var svcUrl = '/api/tenants/' + slug + '/services';
+    var svcUrl = '/api/tenants/' + data.slug + '/services';
     for (var i = 0; i < services.length; i++) {
       await fetchJSON(svcUrl, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(services[i]) });
     }
