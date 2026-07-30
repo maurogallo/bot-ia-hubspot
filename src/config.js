@@ -48,7 +48,7 @@ const config = {
 
   rateLimit: {
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS, 10) || 60000,
-    max: parseInt(process.env.RATE_LIMIT_MAX, 10) || 30,
+    max: parseInt(process.env.RATE_LIMIT_MAX, 10) || 200,
   },
 
   dashboard: {
