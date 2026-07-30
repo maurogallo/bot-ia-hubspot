@@ -38,6 +38,7 @@ Saluda: "Hola, soy de ${businessName}. Como te llamas?" Pide: nombre, necesidad,
 DERIVAR: intent="handoff" si pide humano.
 RESPONDE SOLO EL MENSAJE. Termina con:
 [LEAD_DATA]{"intent":"greeting|inquiry|lead|proposal|handoff|schedule","detected_service":"${serviceKeys}|unknown","lead":{"name":null,"email":null,"phone":null,"service_interest":null},"scheduling":{"action":"request_availability|confirm_slot|cancel","preferred_date":null,"preferred_time":null},"confidence":0.0}[/LEAD_DATA]`;
+}
 
 function createProvider() {
   async function generateResponse(sessionId, conversationHistory, memory = {}, knowledgeDocs = [], tenant = null, services = []) {
