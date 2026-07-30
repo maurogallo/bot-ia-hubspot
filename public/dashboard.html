@@ -308,6 +308,13 @@ async function loadAppointments() {
   } catch (e) { /* ignore */ }
 }
 
+function copyWidgetCode(slug, businessName) {
+  var code = '<script src="https://bot.synaptiqnova.online/widget.js" data-tenant="' + slug + '" data-primary="#2563eb"></script>';
+  navigator.clipboard.writeText(code).then(function() {
+    alert('Codigo copiado. Pegalo antes de </body> en el sitio de ' + businessName);
+  });
+}
+
 function planBadge(plan) {
   var cls = 'badge badge-' + (plan || 'starter');
   return '<span class="' + cls + '">' + (plan || 'starter').toUpperCase() + '</span>';
@@ -339,7 +346,8 @@ function renderClients(tenants, usages) {
       '<td style="min-width:180px">' + quotaBar(used, limit) + '</td>' +
       '<td>' + (t.whatsapp_phone || '—') + '</td>' +
       '<td>' + (t.is_active ? '<span style="color:#22c55e">Activo</span>' : '<span style="color:#ef4444">Inactivo</span>') + '</td>' +
-      '<td><button class="refresh-btn" onclick="editClient(\'' + esc(t.slug) + '\')" style="padding:4px 12px;font-size:12px;margin-right:4px">Editar</button>' +
+      '<td><button class="refresh-btn" onclick="copyWidgetCode(\'' + esc(t.slug) + '\',\'' + esc(t.business_name) + '\')" style="padding:4px 8px;font-size:12px;margin-right:4px;background:#22c55e;border-color:#22c55e">&lt;/&gt;</button>' +
+      '<button class="refresh-btn" onclick="editClient(\'' + esc(t.slug) + '\')" style="padding:4px 12px;font-size:12px;margin-right:4px">Editar</button>' +
       '<button class="refresh-btn" onclick="deleteClient(\'' + esc(t.slug) + '\')" style="padding:4px 12px;font-size:12px;background:#ef4444;border-color:#ef4444">X</button></td></tr>';
   }).join('');
 }
