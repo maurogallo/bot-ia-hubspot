@@ -2,8 +2,8 @@ const { PLAN_FEATURES, getTenantFeatures, canUseFeature, getQuotaLimit } = requi
 
 describe('tenant-features', () => {
   describe('PLAN_FEATURES matrix', () => {
-    test('starter has scheduling disabled', () => {
-      expect(PLAN_FEATURES.starter.scheduling).toBe(false);
+    test('starter has scheduling enabled, crm disabled', () => {
+      expect(PLAN_FEATURES.starter.scheduling).toBe(true);
       expect(PLAN_FEATURES.starter.crm).toBe(false);
       expect(PLAN_FEATURES.starter.knowledgeBase).toBe(false);
     });

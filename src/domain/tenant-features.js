@@ -2,7 +2,7 @@ const PLAN_FEATURES = {
   starter: {
     agents: 1,
     conversationsPerMonth: 100,
-    scheduling: false,
+    scheduling: true,
     crm: false,
     knowledgeBase: false,
     whiteLabel: true,

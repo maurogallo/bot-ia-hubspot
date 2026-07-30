@@ -162,7 +162,7 @@ describe('handleScheduling', () => {
     expect(result.response).toContain('problema');
   });
 
-  test('starter tenant cannot schedule', async () => {
+  test('starter tenant can schedule', async () => {
     const { store, ai, calendar, crm } = setup();
     const starterTenant = { id: 't2', slug: 'starter-tenant', plan: 'starter' };
 
@@ -182,7 +182,7 @@ describe('handleScheduling', () => {
       store, ai, crm, calendar, tenant: starterTenant,
     });
 
-    expect(calendar.getAvailability).not.toHaveBeenCalled();
+    expect(calendar.getAvailability).toHaveBeenCalled();
     expect(result.response).toBeDefined();
   });
 });

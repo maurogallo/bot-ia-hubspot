@@ -376,7 +376,7 @@ function showClientForm(data) {
     '<div class="form-group"><label>Nombre del Negocio</label><input id="f-name" value="' + (data.business_name || '') + '" placeholder="Clinica San Jose"></div>' +
     '<div class="form-group"><label>Descripcion de servicios</label><input id="f-services" value="' + (data.business_services || '') + '" placeholder="Consultas medicas, tratamientos, emergencias"></div>' +
     '<div class="form-group"><label>Plan</label><select id="f-plan" onchange="updatePlanInfo()">' +
-    '<option value="starter"' + (data.plan==='starter'?' selected':'') + '>Starter - Chat basico (100 conv/mes)</option>' +
+    '<option value="starter"' + (data.plan==='starter'?' selected':'') + '>Starter - Chat + Agendamiento (100 conv/mes)</option>' +
     '<option value="business"' + (data.plan==='business'?' selected':'') + '>Business - Chat + Agendamiento + CRM (500 conv/mes)</option>' +
     '<option value="pro"' + (data.plan==='pro'?' selected':'') + '>Pro - Ilimitado + API + Analytics</option>' +
     '<option value="enterprise"' + (data.plan==='enterprise'?' selected':'') + '>Enterprise - Todo + Soporte + Onboarding</option>' +
@@ -396,7 +396,7 @@ function showClientForm(data) {
 
 function updatePlanInfo() {
   var features = {
-    starter: { chat: true, scheduling: false, crm: false, kb: false, conv: '100/mes', api: false },
+    starter: { chat: true, scheduling: true, crm: false, kb: false, conv: '100/mes', api: false },
     business: { chat: true, scheduling: true, crm: true, kb: true, conv: '500/mes', api: false },
     pro: { chat: true, scheduling: true, crm: true, kb: true, conv: 'Ilimitadas', api: true },
     enterprise: { chat: true, scheduling: true, crm: true, kb: true, conv: 'Ilimitadas', api: true, support: true },
