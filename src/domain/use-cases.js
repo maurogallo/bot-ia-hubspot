@@ -75,7 +75,12 @@ async function handleMessage({ message, from, channel, store, ai, crm, calendar,
     knowledgeDocs.push(`INSTRUCCIÓN: Aún no tienes el ${missingData.join(', ')} del cliente. Debes preguntarlo en tu siguiente mensaje.`);
   }
 
-  const { response, leadData } = await ai.generateResponse(session.id, history, memory, knowledgeDocs, tenant);
+  let services = [];
+  if (tenantId && typeof store.getTenantServices === 'function') {
+    try { services = await store.getTenantServices(tenantId); } catch (e) { /* ignore */ }
+  }
+
+  const { response, leadData } = await ai.generateResponse(session.id, history, memory, knowledgeDocs, tenant, services);
 
   await store.addMessage(session.id, 'assistant', response, { leadData });
 

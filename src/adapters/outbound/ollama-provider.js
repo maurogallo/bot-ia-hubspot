@@ -7,10 +7,22 @@ const CACHE_MAX = 100;
 const CACHE_TTL = 60 * 60 * 1000;
 function getCacheKey(msg) { return msg.toLowerCase().replace(/[^a-záéíóúñü0-9\s]/g, '').trim(); }
 
-function buildSystemPrompt(memory = {}, knowledgeDocs = [], tenant = null) {
+function buildSystemPrompt(memory = {}, knowledgeDocs = [], tenant = null, services = []) {
   const businessName = tenant?.business_name || config.business.name;
   const businessServices = tenant?.business_services || config.business.services;
   const hasScheduling = tenant?.features?.scheduling !== false;
+
+  const servicesList = services.length > 0 ? services : [
+    { name: 'Landing Pages', description: 'desde 299 USD' },
+    { name: 'Desarrollo Web', description: 'desde 799 USD' },
+    { name: 'Automatizacion', description: 'desde 499 USD' },
+  ];
+
+  const servicesBlock = servicesList.map((s, i) =>
+    `${i + 1}. ${s.name}${s.description ? ': ' + s.description : ''}${s.price ? ' - $' + s.price + ' ' + (s.price_label || 'USD') : ''}`
+  ).join('\n');
+
+  const serviceKeys = servicesList.map(s => s.name.toLowerCase().replace(/[^a-z0-9]/g, '_')).join('|');
 
   const memoryBlock = Object.keys(memory).length > 0
     ? `\n## CLIENTE\n${Object.entries(memory).map(([k, v]) => `- ${k}: ${v}`).join('\n')}\n`
@@ -35,7 +47,7 @@ Si el cliente ya dio su nombre, email y telefono, OFRECE agendar una reunion. Si
 Debes seguir este guion paso a paso:
 1. Saluda y PREGUNTA SU NOMBRE
 2. Pregunta que necesita
-3. Propon el servicio adecuado
+3. Propon el servicio adecuado de la lista de SERVICIOS
 4. Pide su EMAIL y TELEFONO${hasScheduling ? '\n5. Si ya tienes nombre, email y telefono, ofrece agendar una reunion' : ''}
 
 REGLAS:
@@ -45,29 +57,19 @@ REGLAS:
 - Si ya tienes datos, pide solo lo que falta
 - Usa espanol neutro, trata de "tu"
 
-Ejemplo:
-Usuario: hola
-Tu: Hola! Soy asesor de NeoWeb Studio. cual es tu nombre?
-Usuario: soy Juan
-Tu: Mucho gusto Juan. Que servicio necesitas?
-Usuario: una landing page
-Tu: Perfecto Juan. Podrias darme tu email para enviarte la propuesta?
-
 ## SERVICIOS
-1. Landing Pages: desde 299 USD
-2. Desarrollo Web: desde 799 USD
-3. Automatizacion: desde 499 USD
+${servicesBlock}
 
 ## DERIVACION
 Usa intent="handoff" si pide humano.
 
 ## FORMATO
 Responde natural. Termina con:
-[LEAD_DATA] { "intent": "greeting|inquiry|lead|proposal|handoff|schedule", "detected_service": "landing_page|web_development|automation|unknown", "lead": { "name": null, "email": null, "phone": null, "service_interest": null }, "scheduling": { "action": "request_availability|confirm_slot|cancel", "preferred_date": null, "preferred_time": null }, "confidence": 0.0 } [/LEAD_DATA]`;
+[LEAD_DATA] { "intent": "greeting|inquiry|lead|proposal|handoff|schedule", "detected_service": "${serviceKeys}|unknown", "lead": { "name": null, "email": null, "phone": null, "service_interest": null }, "scheduling": { "action": "request_availability|confirm_slot|cancel", "preferred_date": null, "preferred_time": null }, "confidence": 0.0 } [/LEAD_DATA]`;
 }
 
 function createProvider() {
-  async function generateResponse(sessionId, conversationHistory, memory = {}, knowledgeDocs = [], tenant = null) {
+  async function generateResponse(sessionId, conversationHistory, memory = {}, knowledgeDocs = [], tenant = null, services = []) {
     const knowledgeContents = knowledgeDocs.map(d => d.content || d);
 
     const lastMsg = conversationHistory.length > 0 ? conversationHistory[conversationHistory.length - 1].content : '';
@@ -79,7 +81,7 @@ function createProvider() {
     }
 
     const messages = [
-      { role: 'system', content: buildSystemPrompt(memory, knowledgeContents, tenant) },
+      { role: 'system', content: buildSystemPrompt(memory, knowledgeContents, tenant, services) },
       ...conversationHistory.map(m => ({
         role: m.role === 'assistant' ? 'assistant' : 'user',
         content: m.content,

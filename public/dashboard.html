@@ -185,8 +185,8 @@ let pollTimer;
 
 function $(id) { return document.getElementById(id); }
 
-async function fetchJSON(url) {
-  const res = await fetch(url);
+async function fetchJSON(url, options) {
+  const res = options ? await fetch(url, options) : await fetch(url);
   if (!res.ok) throw new Error(res.statusText);
   return res.json();
 }
@@ -367,17 +367,160 @@ async function cancelAppointment(id) {
 
 function showClientForm(data) {
   data = data || {};
-  $('clientModalTitle').textContent = data.slug ? 'Editar Cliente' : 'Nuevo Cliente';
-  $('clientModalBody').innerHTML =
-    '<div class="form-group"><label>Slug</label><input id="f-slug" value="' + (data.slug || '') + '" ' + (data.slug ? 'readonly' : '') + '></div>' +
-    '<div class="form-group"><label>Nombre del Negocio</label><input id="f-name" value="' + (data.business_name || '') + '"></div>' +
-    '<div class="form-group"><label>Servicios</label><input id="f-services" value="' + (data.business_services || '') + '"></div>' +
-    '<div class="form-group"><label>Plan</label><select id="f-plan"><option value="starter"' + (data.plan==='starter'?' selected':'') + '>Starter</option><option value="business"' + (data.plan==='business'?' selected':'') + '>Business</option><option value="pro"' + (data.plan==='pro'?' selected':'') + '>Pro</option><option value="enterprise"' + (data.plan==='enterprise'?' selected':'') + '>Enterprise</option></select></div>' +
-    '<div class="form-group"><label>WhatsApp (número)</label><input id="f-wa" value="' + (data.whatsapp_phone || '') + '"></div>' +
-    '<div class="form-group"><label>Nombre del Dueño</label><input id="f-owner" value="' + (data.owner_name || '') + '"></div>' +
-    '<div class="form-group"><label>Email del Dueño</label><input id="f-owner-email" value="' + (data.owner_email || '') + '"></div>' +
-    '<div class="form-actions"><button class="btn-secondary" onclick="$(\'clientModal\').classList.remove(\'open\')">Cancelar</button><button class="btn-primary" onclick="saveClient(\'' + (data.slug || '') + '\')">Guardar</button></div>';
+  $('clientModalTitle').textContent = data.slug ? 'Editar Cliente: ' + data.business_name : 'Nuevo Cliente - Paso 1/3';
+
+  var steps = !data.slug ? '<div style="display:flex;gap:4px;margin-bottom:12px"><span style="background:#2563eb;color:#fff;padding:4px 12px;border-radius:6px;font-size:12px;font-weight:600">Paso 1</span><span style="background:#f1f5f9;color:#64748b;padding:4px 12px;border-radius:6px;font-size:12px">Paso 2</span><span style="background:#f1f5f9;color:#64748b;padding:4px 12px;border-radius:6px;font-size:12px">Paso 3</span></div>' : '';
+
+  $('clientModalBody').innerHTML = steps +
+    '<div class="form-group"><label>Slug</label><input id="f-slug" value="' + (data.slug || '') + '" placeholder="clinica-san-jose" ' + (data.slug ? 'readonly' : '') + '></div>' +
+    '<div class="form-group"><label>Nombre del Negocio</label><input id="f-name" value="' + (data.business_name || '') + '" placeholder="Clinica San Jose"></div>' +
+    '<div class="form-group"><label>Descripcion de servicios</label><input id="f-services" value="' + (data.business_services || '') + '" placeholder="Consultas medicas, tratamientos, emergencias"></div>' +
+    '<div class="form-group"><label>Plan</label><select id="f-plan"><option value="starter"' + (data.plan==='starter'?' selected':'') + '>Starter ($29/mes) - Chat basico</option><option value="business"' + (data.plan==='business'?' selected':'') + '>Business ($79/mes) - Chat + CRM + Agendamiento</option><option value="pro"' + (data.plan==='pro'?' selected':'') + '>Pro ($149/mes) - Ilimitado + API</option><option value="enterprise"' + (data.plan==='enterprise'?' selected':'') + '>Enterprise ($299/mes) - Todo + Soporte</option></select></div>' +
+    '<div class="form-group"><label>WhatsApp (numero)</label><input id="f-wa" value="' + (data.whatsapp_phone || '') + '" placeholder="+54911..."></div>' +
+    '<div class="form-group"><label>Nombre del Dueno</label><input id="f-owner" value="' + (data.owner_name || '') + '" placeholder="Dr. Juan Perez"></div>' +
+    '<div class="form-group"><label>Email del Dueno</label><input id="f-owner-email" value="' + (data.owner_email || '') + '" placeholder="juan@clinicasanjose.com"></div>' +
+    '<div class="form-actions"><button class="btn-secondary" onclick="$(\'clientModal\').classList.remove(\'open\')">Cancelar</button>' +
+    (data.slug
+      ? '<button class="btn-primary" onclick="saveClient(\'' + data.slug + '\')">Guardar</button><button class="btn-primary" style="background:#22c55e" onclick="showServicesStep(\'' + data.slug + '\')">Servicios &raquo;</button>'
+      : '<button class="btn-primary" onclick="goToWizardStep2()">Siguiente &raquo;</button>') +
+    '</div>';
   $('clientModal').classList.add('open');
+}
+
+function goToWizardStep2() {
+  var slug = $('f-slug').value.trim();
+  var name = $('f-name').value.trim();
+  if (!slug || !name) { alert('Slug y Nombre son obligatorios'); return; }
+  $('clientModalTitle').textContent = 'Nuevo Cliente - Paso 2/3';
+  $('clientModalBody').innerHTML =
+    '<div style="display:flex;gap:4px;margin-bottom:12px"><span style="background:#22c55e;color:#fff;padding:4px 12px;border-radius:6px;font-size:12px;font-weight:600">Paso 1 ' + checkIcon() + '</span><span style="background:#2563eb;color:#fff;padding:4px 12px;border-radius:6px;font-size:12px;font-weight:600">Paso 2</span><span style="background:#f1f5f9;color:#64748b;padding:4px 12px;border-radius:6px;font-size:12px">Paso 3</span></div>' +
+    '<p style="margin-bottom:12px;color:#64748b">Selecciona las funcionalidades para ' + esc(name) + ':</p>' +
+    '<div class="form-group" style="display:flex;align-items:center;gap:12px"><input type="checkbox" id="w-feat-wa" checked style="width:auto"><label for="w-feat-wa">WhatsApp</label></div>' +
+    '<div class="form-group" style="display:flex;align-items:center;gap:12px"><input type="checkbox" id="w-feat-web" checked style="width:auto"><label for="w-feat-web">Chat Web (Widget)</label></div>' +
+    '<div class="form-group" style="display:flex;align-items:center;gap:12px"><input type="checkbox" id="w-feat-sched" style="width:auto"><label for="w-feat-sched">Agendamiento (Google Calendar)</label></div>' +
+    '<div class="form-group" style="display:flex;align-items:center;gap:12px"><input type="checkbox" id="w-feat-crm" style="width:auto"><label for="w-feat-crm">CRM (HubSpot)</label></div>' +
+    '<div class="form-group" style="display:flex;align-items:center;gap:12px"><input type="checkbox" id="w-feat-kb" style="width:auto"><label for="w-feat-kb">Knowledge Base (RAG)</label></div>' +
+    '<div class="form-actions"><button class="btn-secondary" onclick="showClientForm({})">Atras</button><button class="btn-primary" onclick="goToWizardStep3()">Siguiente &raquo;</button></div>';
+}
+
+function checkIcon() { return '<span style="color:#22c55e;font-size:10px">&#10003;</span>'; }
+
+function goToWizardStep3() {
+  $('clientModalTitle').textContent = 'Nuevo Cliente - Paso 3/3';
+  $('clientModalBody').innerHTML =
+    '<div style="display:flex;gap:4px;margin-bottom:12px"><span style="background:#22c55e;color:#fff;padding:4px 12px;border-radius:6px;font-size:12px;font-weight:600">Paso 1 ' + checkIcon() + '</span><span style="background:#22c55e;color:#fff;padding:4px 12px;border-radius:6px;font-size:12px;font-weight:600">Paso 2 ' + checkIcon() + '</span><span style="background:#2563eb;color:#fff;padding:4px 12px;border-radius:6px;font-size:12px;font-weight:600">Paso 3</span></div>' +
+    '<p style="margin-bottom:12px;color:#64748b">Define los servicios que ofrece este cliente. El bot los usara para recomendar.</p>' +
+    '<div id="wizardServices" style="display:flex;flex-direction:column;gap:8px">' +
+    '<div style="display:flex;gap:8px"><input id="ws-name" placeholder="Nombre del servicio" style="flex:1"><input id="ws-price" placeholder="Precio" style="width:100px" type="number"><input id="ws-label" placeholder="USD" style="width:70px"></div>' +
+    '<button class="refresh-btn" onclick="addWizardService()" style="align-self:flex-start">+ Agregar</button>' +
+    '<div id="wizardServiceList"></div>' +
+    '</div>' +
+    '<div class="form-actions"><button class="btn-secondary" onclick="goToWizardStep2()">Atras</button><button class="btn-primary" onclick="finishWizard()">Crear Cliente</button></div>';
+  window._wizardServices = [];
+}
+
+function addWizardService() {
+  var n = $('ws-name').value.trim();
+  var p = $('ws-price').value.trim();
+  var l = $('ws-label').value.trim();
+  if (!n) return;
+  window._wizardServices = window._wizardServices || [];
+  window._wizardServices.push({ name: n, price: p ? parseFloat(p) : null, priceLabel: l || 'USD' });
+  $('ws-name').value = ''; $('ws-price').value = ''; $('ws-label').value = '';
+  renderWizardServices();
+}
+
+function renderWizardServices() {
+  var list = window._wizardServices || [];
+  $('wizardServiceList').innerHTML = list.map(function (s, i) {
+    return '<div style="display:flex;align-items:center;gap:8px;padding:6px 12px;background:#f8fafc;border-radius:8px"><span style="flex:1;font-weight:500">' + esc(s.name) + '</span><span style="color:#64748b;font-size:13px">' + (s.price ? '$' + s.price + ' ' + s.priceLabel : 'Consultar') + '</span><button style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:16px" onclick="window._wizardServices.splice(' + i + ',1);renderWizardServices()">x</button></div>';
+  }).join('');
+}
+
+async function finishWizard() {
+  var slug = $('f-slug').value.trim();
+  var name = $('f-name').value.trim();
+  if (!slug || !name) { alert('Slug y Nombre son obligatorios'); return; }
+
+  var features = {};
+  if ($('w-feat-wa') && $('w-feat-wa').checked) features.whatsapp = true;
+  if ($('w-feat-web') && $('w-feat-web').checked) features.webChat = true;
+  if ($('w-feat-sched') && $('w-feat-sched').checked) features.scheduling = true;
+  if ($('w-feat-crm') && $('w-feat-crm').checked) features.crm = true;
+  if ($('w-feat-kb') && $('w-feat-kb').checked) features.knowledgeBase = true;
+
+  var plan = $('f-plan') ? $('f-plan').value : 'starter';
+  if (features.scheduling || features.crm) plan = 'business';
+  if (features.crm && features.scheduling && features.knowledgeBase) plan = 'pro';
+
+  var body = {
+    slug: slug,
+    businessName: name,
+    businessServices: $('f-services').value,
+    plan: plan,
+    whatsappPhone: $('f-wa').value,
+    ownerName: $('f-owner').value,
+    ownerEmail: $('f-owner-email').value,
+    features: features,
+  };
+
+  try {
+    await fetchJSON('/api/tenants', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+    var services = window._wizardServices || [];
+    var svcUrl = '/api/tenants/' + slug + '/services';
+    for (var i = 0; i < services.length; i++) {
+      await fetchJSON(svcUrl, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(services[i]) });
+    }
+    $('clientModal').classList.remove('open');
+    loadClients();
+  } catch(e) { alert('Error al crear cliente: ' + e.message); }
+}
+
+// --- Services editing for existing tenants ---
+
+async function showServicesStep(slug) {
+  try {
+    var services = await fetchJSON('/api/tenants/' + slug + '/services');
+    $('clientModalTitle').textContent = 'Servicios - ' + slug;
+    $('clientModalBody').innerHTML =
+      '<p style="margin-bottom:12px;color:#64748b">Define los servicios de este cliente. El bot los usara en las conversaciones.</p>' +
+      '<div style="display:flex;gap:8px;margin-bottom:12px"><input id="ss-name" placeholder="Nombre del servicio" style="flex:1"><input id="ss-price" placeholder="Precio" style="width:100px" type="number"><input id="ss-label" placeholder="USD" style="width:70px"><input id="ss-desc" placeholder="Descripcion (opcional)" style="width:200px"></div>' +
+      '<button class="refresh-btn" onclick="addService(\'' + slug + '\')" style="align-self:flex-start;margin-bottom:12px">+ Agregar Servicio</button>' +
+      '<div id="svcList">' + renderServiceList(services, slug) + '</div>' +
+      '<div class="form-actions"><button class="btn-secondary" onclick="editClientBack(\'' + slug + '\')">Volver</button><button class="btn-primary" onclick="$(\'clientModal\').classList.remove(\'open\');loadClients()">Listo</button></div>';
+    $('clientModal').classList.add('open');
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+function renderServiceList(services, slug) {
+  if (!services || services.length === 0) return '<div style="color:#94a3b8;padding:20px;text-align:center">Sin servicios definidos. Agrega al menos uno.</div>';
+  return services.map(function (s) {
+    return '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8fafc;border-radius:8px;margin-bottom:4px"><span style="flex:1;font-weight:500">' + esc(s.name) + '</span><span style="font-size:12px;color:#64748b">' + (s.description ? esc(s.description) + ' - ' : '') + '</span><span style="color:#2563eb;font-size:13px">' + (s.price ? '$' + s.price + ' ' + (s.price_label || 'USD') : 'Consultar') + '</span><button style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:16px" onclick="deleteService(\'' + slug + '\',\'' + s.id + '\')">x</button></div>';
+  }).join('');
+}
+
+async function addService(slug) {
+  var n = $('ss-name').value.trim();
+  if (!n) { alert('Nombre es obligatorio'); return; }
+  var p = $('ss-price').value;
+  var l = $('ss-label').value || 'USD';
+  var d = $('ss-desc').value;
+  var body = { name: n, price: p ? parseFloat(p) : null, priceLabel: l, description: d };
+  await fetchJSON('/api/tenants/' + slug + '/services', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+  $('ss-name').value = ''; $('ss-price').value = ''; $('ss-label').value = ''; $('ss-desc').value = '';
+  var services = await fetchJSON('/api/tenants/' + slug + '/services');
+  $('svcList').innerHTML = renderServiceList(services, slug);
+}
+
+async function deleteService(slug, id) {
+  await fetchJSON('/api/tenants/' + slug + '/services/' + id, { method:'DELETE' });
+  var services = await fetchJSON('/api/tenants/' + slug + '/services');
+  $('svcList').innerHTML = renderServiceList(services, slug);
+}
+
+async function editClientBack(slug) {
+  var t = await fetchJSON('/api/tenants/' + slug);
+  showClientForm(t);
 }
 
 async function saveClient(slug) {
@@ -392,15 +535,12 @@ async function saveClient(slug) {
   };
   if (!body.slug || !body.businessName) { alert('Slug y Nombre son obligatorios'); return; }
   try {
-    if (slug) {
-      await fetch('/api/tenants/' + slug, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
-    } else {
-      await fetch('/api/tenants', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
-    }
+    await fetchJSON('/api/tenants/' + slug, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
     $('clientModal').classList.remove('open');
     loadClients();
   } catch(e) { alert('Error al guardar cliente'); }
 }
+
 
 async function editClient(slug) {
   try {

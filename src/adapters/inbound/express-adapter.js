@@ -401,6 +401,44 @@ h1{font-size:22px;color:#1e293b;margin-bottom:8px}p{color:#64748b;margin-bottom:
     }
   });
 
+  // ---- Tenant Services ----
+
+  app.get('/api/tenants/:slug/services', requireDashboardAuth, async (req, res) => {
+    try {
+      const tenant = await deps.store.getTenantBySlug(req.params.slug);
+      if (!tenant) return res.status(404).json({ error: 'Tenant no encontrado' });
+      const services = await deps.store.getTenantServices(tenant.id);
+      res.json(services);
+    } catch (error) {
+      logger.error('Tenant services list error', { error: error.message });
+      res.status(500).json({ error: 'Error al obtener servicios' });
+    }
+  });
+
+  app.post('/api/tenants/:slug/services', requireDashboardAuth, async (req, res) => {
+    try {
+      const tenant = await deps.store.getTenantBySlug(req.params.slug);
+      if (!tenant) return res.status(404).json({ error: 'Tenant no encontrado' });
+      const { name } = req.body;
+      if (!name) return res.status(400).json({ error: 'name es obligatorio' });
+      const service = await deps.store.saveTenantService({ tenantId: tenant.id, ...req.body });
+      res.status(201).json(service);
+    } catch (error) {
+      logger.error('Tenant service create error', { error: error.message });
+      res.status(500).json({ error: 'Error al crear servicio' });
+    }
+  });
+
+  app.delete('/api/tenants/:slug/services/:id', requireDashboardAuth, async (req, res) => {
+    try {
+      await deps.store.deleteTenantService(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      logger.error('Tenant service delete error', { error: error.message });
+      res.status(500).json({ error: 'Error al eliminar servicio' });
+    }
+  });
+
   // ---- Tenant-scoped dashboard queries ----
 
   app.get('/api/tenants/:slug/stats', requireDashboardAuth, async (req, res) => {

@@ -64,6 +64,19 @@ function createStore() {
         CREATE INDEX IF NOT EXISTS idx_tenants_slug ON tenants(slug);
         CREATE INDEX IF NOT EXISTS idx_tenants_whatsapp ON tenants(whatsapp_phone);
 
+        CREATE TABLE IF NOT EXISTS tenant_services (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+          name TEXT NOT NULL,
+          description TEXT,
+          price DECIMAL(10,2),
+          price_label TEXT DEFAULT 'USD',
+          sort_order INTEGER DEFAULT 0,
+          is_active BOOLEAN DEFAULT true,
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_tenant_services_tenant ON tenant_services(tenant_id);
+
         ALTER TABLE IF EXISTS sessions ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id);
         ALTER TABLE IF EXISTS contacts ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id);
 
@@ -416,6 +429,28 @@ function createStore() {
     await query("UPDATE tenants SET is_active = false, updated_at = NOW() WHERE slug = $1", [slug]);
   }
 
+  async function getTenantServices(tenantId) {
+    const result = await query(
+      'SELECT * FROM tenant_services WHERE tenant_id = $1 AND is_active = true ORDER BY sort_order ASC, created_at ASC',
+      [tenantId]
+    );
+    return result.rows;
+  }
+
+  async function saveTenantService(data) {
+    const { tenantId, name, description = null, price = null, priceLabel = 'USD', sortOrder = 0 } = data;
+    const result = await query(
+      `INSERT INTO tenant_services (tenant_id, name, description, price, price_label, sort_order)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [tenantId, name, description, price, priceLabel, sortOrder]
+    );
+    return result.rows[0];
+  }
+
+  async function deleteTenantService(id) {
+    await query('DELETE FROM tenant_services WHERE id = $1', [id]);
+  }
+
   async function getTenantStats(tenantId) {
     const result = await query(
       `SELECT
@@ -564,7 +599,7 @@ function createStore() {
     getKnowledgeCount, addKnowledge, searchKnowledge, getAllKnowledge, deleteKnowledge,
     getKnowledgeByTenant, addKnowledgeForTenant, searchKnowledgeForTenant,
     getTenantBySlug, getTenantByPhone, getTenantByPhoneNumberId, getDefaultTenant,
-    getAllTenants, createTenant, updateTenant, deactivateTenant, getTenantStats,
+    getAllTenants, createTenant, updateTenant, deactivateTenant, getTenantServices, saveTenantService, deleteTenantService, getTenantStats,
     saveAppointment, getAppointmentsByEmail, getAppointmentsByTenant,
     getUpcomingAppointments, updateAppointmentStatus, cancelAppointment, getAppointmentById,
     getMonthlyUsage, logUsage, getUsageStats,
