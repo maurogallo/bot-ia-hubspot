@@ -309,7 +309,7 @@ async function loadAppointments() {
 }
 
 function copyWidgetCode(slug, businessName) {
-  var code = '<script src="https://bot.synaptiqnova.online/widget.js" data-tenant="' + slug + '" data-primary="#2563eb"></script>';
+  var code = '<script src="https://bot.synaptiqnova.online/widget.js" data-tenant="' + slug + '" data-primary="#2563eb"><\/script>';
   navigator.clipboard.writeText(code).then(function() {
     alert('Codigo copiado. Pegalo antes de </body> en el sitio de ' + businessName);
   });
