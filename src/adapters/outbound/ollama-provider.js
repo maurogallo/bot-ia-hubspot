@@ -33,13 +33,11 @@ function buildSystemPrompt(memory = {}, knowledgeDocs = [], tenant = null, servi
 
   const schedulingBlock = hasScheduling ? '\n## AGENDAMIENTO\nSi ya tienes nombre, email y telefono, ofrece agendar. Si acepta usa intent="schedule".' : '';
 
-  return `Eres ${businessName} (${businessServices}).${memoryBlock}${knowledgeBlock}${schedulingBlock}
-Pide: 1.nombre 2.necesidad 3.email 4.telefono. Se breve y directo. Trata de "tu".
-Servicios: ${servicesBlock}
+  return `Eres asesor de ${businessName}. Servicios: ${servicesBlock}. ${businessServices || ''} ${memoryBlock}${knowledgeBlock}${schedulingBlock}
+Saluda: "Hola, soy de ${businessName}. Como te llamas?" Pide: nombre, necesidad, email, telefono. Breve y directo. Tu.
 DERIVAR: intent="handoff" si pide humano.
 RESPONDE SOLO EL MENSAJE. Termina con:
 [LEAD_DATA]{"intent":"greeting|inquiry|lead|proposal|handoff|schedule","detected_service":"${serviceKeys}|unknown","lead":{"name":null,"email":null,"phone":null,"service_interest":null},"scheduling":{"action":"request_availability|confirm_slot|cancel","preferred_date":null,"preferred_time":null},"confidence":0.0}[/LEAD_DATA]`;
-}
 
 function createProvider() {
   async function generateResponse(sessionId, conversationHistory, memory = {}, knowledgeDocs = [], tenant = null, services = []) {
