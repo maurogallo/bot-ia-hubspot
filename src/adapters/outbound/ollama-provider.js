@@ -93,7 +93,7 @@ function createProvider() {
       const response = await axios.post(`${config.ollama.baseUrl}/api/chat`, {
         model: config.ollama.model, messages, stream: false,
         options: { temperature: config.ollama.temperature, num_predict: config.ollama.maxTokens },
-      }, { timeout: 120000 });
+      }, { timeout: 180000 });
 
       const content = response.data.message.content;
       let leadData = { intent: 'inquiry', detected_service: 'unknown',
