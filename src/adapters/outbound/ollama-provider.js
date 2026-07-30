@@ -7,55 +7,79 @@ const CACHE_MAX = 100;
 const CACHE_TTL = 60 * 60 * 1000;
 function getCacheKey(msg) { return msg.toLowerCase().replace(/[^a-záéíóúñü0-9\s]/g, '').trim(); }
 
-function buildSystemPrompt(memory = {}, knowledgeDocs = []) {
+function buildSystemPrompt(memory = {}, knowledgeDocs = [], tenant = null) {
+  const businessName = tenant?.business_name || config.business.name;
+  const businessServices = tenant?.business_services || config.business.services;
+  const hasScheduling = tenant?.features?.scheduling !== false;
+
   const memoryBlock = Object.keys(memory).length > 0
     ? `\n## CLIENTE\n${Object.entries(memory).map(([k, v]) => `- ${k}: ${v}`).join('\n')}\n`
     : '';
   const knowledgeBlock = knowledgeDocs.length > 0
     ? `\n## EMPRESA\n${knowledgeDocs.map((d, i) => `${i + 1}. ${d}`).join('\n')}\n`
     : '';
-  return `Eres asesor comercial de ${config.business.name} (${config.business.services}).${memoryBlock}${knowledgeBlock}
 
-## PERSONALIDAD
-Profesional, amable, español neutro. No inventes información.
+  const schedulingBlock = hasScheduling ? `
+## AGENDAMIENTO
+Si el cliente ya dio su nombre, email y telefono, OFRECE agendar una reunion. Si acepta:
+- Pregunta que dia y horario prefiere
+- Si menciona fecha/hora, usa intent="schedule" con scheduling.action="request_availability"
+- Si confirma un horario especifico, usa scheduling.action="confirm_slot"
+- Si quiere cancelar, usa scheduling.action="cancel"
+- En scheduling.preferred_date escribe la fecha en formato YYYY-MM-DD
+- En scheduling.preferred_time escribe la hora en formato HH:MM (24h)
+` : '';
+
+  return `Eres asesor comercial de ${businessName} (${businessServices}).${memoryBlock}${knowledgeBlock}${schedulingBlock}
+
+Debes seguir este guion paso a paso:
+1. Saluda y PREGUNTA SU NOMBRE
+2. Pregunta que necesita
+3. Propon el servicio adecuado
+4. Pide su EMAIL y TELEFONO${hasScheduling ? '\n5. Si ya tienes nombre, email y telefono, ofrece agendar una reunion' : ''}
+
+REGLAS:
+- Siempre pide el nombre en tu primer mensaje
+- No des largos discursos, se directo
+- No termines sin nombre, email y telefono
+- Si ya tienes datos, pide solo lo que falta
+- Usa espanol neutro, trata de "tu"
+
+Ejemplo:
+Usuario: hola
+Tu: Hola! Soy asesor de NeoWeb Studio. cual es tu nombre?
+Usuario: soy Juan
+Tu: Mucho gusto Juan. Que servicio necesitas?
+Usuario: una landing page
+Tu: Perfecto Juan. Podrias darme tu email para enviarte la propuesta?
 
 ## SERVICIOS
-1. Landing Pages: desde $299 USD
-2. Desarrollo Web: desde $799 USD
-3. Automatización: desde $499 USD
+1. Landing Pages: desde 299 USD
+2. Desarrollo Web: desde 799 USD
+3. Automatizacion: desde 499 USD
 
-## CAPTURA DE DATOS DEL LEAD (OBLIGATORIO)
-Debes obtener estos datos del cliente durante la conversación:
-1. PRIMERO: Pregunta su nombre
-2. LUEGO: Pregunta sobre su negocio y qué necesita
-3. DESPUÉS: Propón el servicio adecuado
-4. FINALMENTE: Pide su EMAIL y TELÉFONO para enviarle la propuesta
-
-NO termines la conversación sin haber obtenido nombre, email y teléfono.
-Si ya tienes algunos datos (memory), no preguntes de nuevo, pide solo los que faltan.
-
-## DERIVACIÓN
-Usa intent="handoff" si: pide humano, quiere agendar, listo para comprar.
+## DERIVACION
+Usa intent="handoff" si pide humano.
 
 ## FORMATO
 Responde natural. Termina con:
-[LEAD_DATA] { "intent": "greeting|inquiry|lead|proposal|handoff", "detected_service": "landing_page|web_development|automation|unknown", "lead": { "name": null, "email": null, "phone": null, "service_interest": null }, "confidence": 0.0 } [/LEAD_DATA]`;
+[LEAD_DATA] { "intent": "greeting|inquiry|lead|proposal|handoff|schedule", "detected_service": "landing_page|web_development|automation|unknown", "lead": { "name": null, "email": null, "phone": null, "service_interest": null }, "scheduling": { "action": "request_availability|confirm_slot|cancel", "preferred_date": null, "preferred_time": null }, "confidence": 0.0 } [/LEAD_DATA]`;
 }
 
 function createProvider() {
-  async function generateResponse(sessionId, conversationHistory, memory = {}, knowledgeDocs = []) {
+  async function generateResponse(sessionId, conversationHistory, memory = {}, knowledgeDocs = [], tenant = null) {
     const knowledgeContents = knowledgeDocs.map(d => d.content || d);
 
     const lastMsg = conversationHistory.length > 0 ? conversationHistory[conversationHistory.length - 1].content : '';
     const cacheKey = getCacheKey(lastMsg);
     const cached = responseCache.get(cacheKey);
-    if (cached && Date.now() - cached.ts < CACHE_TTL && conversationHistory.length <= 2 && !memory.contact_name) {
+    if (cached && Date.now() - cached.ts < CACHE_TTL && conversationHistory.length <= 2 && !memory.contact_name && cached.leadData.intent !== 'error') {
       logger.info('Response cache hit', { sessionId, cacheKey });
       return { response: cached.response, leadData: { ...cached.leadData } };
     }
 
     const messages = [
-      { role: 'system', content: buildSystemPrompt(memory, knowledgeContents) },
+      { role: 'system', content: buildSystemPrompt(memory, knowledgeContents, tenant) },
       ...conversationHistory.map(m => ({
         role: m.role === 'assistant' ? 'assistant' : 'user',
         content: m.content,
@@ -72,6 +96,7 @@ function createProvider() {
       const content = response.data.message.content;
       let leadData = { intent: 'inquiry', detected_service: 'unknown',
         lead: { name: null, email: null, phone: null, service_interest: null },
+        scheduling: { action: null, preferred_date: null, preferred_time: null },
         actions: [], confidence: 0.5 };
 
       const jsonMatch = content.match(/(?:\[LEAD_DATA\]|\*\*LEAD_DATA\*\*)\s*({[\s\S]*?})\s*(?:\[\/LEAD_DATA\]|\*\*\/LEAD_DATA\*\*)/);
@@ -96,6 +121,7 @@ function createProvider() {
           response: 'Lo siento, el servicio de IA no está disponible. Intenta más tarde.',
           leadData: { intent: 'error', detected_service: 'unknown',
             lead: { name: null, email: null, phone: null, service_interest: null },
+            scheduling: { action: null, preferred_date: null, preferred_time: null },
             actions: [], confidence: 0 },
         };
       }

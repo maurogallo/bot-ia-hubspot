@@ -55,6 +55,16 @@ function createAdapter(deps) {
 
       logger.info('Meta WhatsApp message', { phone: message.from, text: text.substring(0, 100) });
 
+      const phoneNumberId = change?.value?.metadata?.phone_number_id;
+
+      let tenant = null;
+      if (deps.tenantResolver) {
+        tenant = await deps.tenantResolver.resolveFromPhoneNumberId(phoneNumberId);
+        if (!tenant.plan || tenant.slug === 'default') {
+          tenant = await deps.tenantResolver.resolveFromWhatsApp(message.from);
+        }
+      }
+
       const result = await deps.handleMessage({
         message: text,
         from: message.from,
@@ -62,6 +72,8 @@ function createAdapter(deps) {
         store: deps.store,
         ai: deps.ai,
         crm: deps.crm,
+        calendar: deps.calendar,
+        tenant,
       });
 
       if (result.response) {

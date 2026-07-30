@@ -48,6 +48,10 @@ function createAdapter(deps) {
 
       logger.info('WhatsApp message', { phone: message.from, text: message.body.substring(0, 100) });
 
+      const tenant = deps.tenantResolver
+        ? await deps.tenantResolver.resolveFromWhatsApp(message.from)
+        : null;
+
       const result = await deps.handleMessage({
         message: message.body,
         from: message.from,
@@ -55,6 +59,8 @@ function createAdapter(deps) {
         store: deps.store,
         ai: deps.ai,
         crm: deps.crm,
+        calendar: deps.calendar,
+        tenant,
       });
 
       if (result.response) {

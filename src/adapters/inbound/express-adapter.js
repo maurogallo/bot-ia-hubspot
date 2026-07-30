@@ -117,8 +117,9 @@ footer{position:fixed;bottom:0;left:0;right:0;padding:12px;background:#fff;borde
     if (!message || !from) return res.status(400).json({ error: 'Los campos "message" y "from" son obligatorios' });
     if (typeof message !== 'string' || message.length > 4000) return res.status(400).json({ error: 'Mensaje demasiado largo' });
     try {
-      const result = await deps.handleMessage({ message, from, channel, store: deps.store, ai: deps.ai, crm: deps.crm });
-      res.json({ reply: result.response, handoffNeeded: result.handoffNeeded });
+      const tenant = deps.tenantResolver ? await deps.tenantResolver.resolveFromRequest(req) : null;
+      const result = await deps.handleMessage({ message, from, channel, store: deps.store, ai: deps.ai, crm: deps.crm, calendar: deps.calendar, tenant });
+      res.json({ reply: result.response, handoffNeeded: result.handoffNeeded, quotaExceeded: result.quotaExceeded || false, leadData: result.leadData });
     } catch (error) {
       logger.error('Webhook error', { error: error.message });
       res.status(500).json({ error: 'Error interno del servidor' });
@@ -291,7 +292,14 @@ h1{font-size:22px;color:#1e293b;margin-bottom:8px}p{color:#64748b;margin-bottom:
 
   app.get('/api/knowledge', async (req, res) => {
     try {
-      const docs = await deps.store.getAllKnowledge();
+      const { tenant: slug } = req.query;
+      let docs;
+      if (slug) {
+        const tenant = await deps.store.getTenantBySlug(slug);
+        docs = await deps.store.getKnowledgeByTenant(tenant?.id || null);
+      } else {
+        docs = await deps.store.getAllKnowledge();
+      }
       res.json(docs);
     } catch (error) {
       logger.error('Knowledge list error', { error: error.message });
@@ -301,11 +309,14 @@ h1{font-size:22px;color:#1e293b;margin-bottom:8px}p{color:#64748b;margin-bottom:
 
   app.post('/api/knowledge', async (req, res) => {
     try {
-      const { content, metadata = {} } = req.body;
+      const { content, metadata = {}, tenant: slug } = req.body;
       if (!content || typeof content !== 'string') return res.status(400).json({ error: 'content es requerido' });
+      const tenant = slug ? await deps.store.getTenantBySlug(slug) : null;
       const embedding = await deps.ai.generateEmbedding(content);
-      const doc = await deps.store.addKnowledge(content, metadata, embedding);
-      logger.info('Knowledge doc added', { id: doc.id });
+      const doc = tenant?.id
+        ? await deps.store.addKnowledgeForTenant(content, metadata, embedding, tenant.id)
+        : await deps.store.addKnowledge(content, metadata, embedding);
+      logger.info('Knowledge doc added', { id: doc.id, tenantId: tenant?.id });
       res.status(201).json(doc);
     } catch (error) {
       logger.error('Knowledge add error', { error: error.message });
@@ -331,6 +342,212 @@ h1{font-size:22px;color:#1e293b;margin-bottom:8px}p{color:#64748b;margin-bottom:
     } catch (error) {
       logger.error('Knowledge reseed error', { error: error.message });
       res.status(500).json({ error: 'Error al re-sembrar' });
+    }
+  });
+
+  // ---- Tenants ----
+
+  app.get('/api/tenants', requireDashboardAuth, async (req, res) => {
+    try {
+      const tenants = await deps.store.getAllTenants();
+      res.json(tenants);
+    } catch (error) {
+      logger.error('Tenants list error', { error: error.message });
+      res.status(500).json({ error: 'Error al obtener tenants' });
+    }
+  });
+
+  app.post('/api/tenants', requireDashboardAuth, async (req, res) => {
+    try {
+      const { slug, businessName, plan } = req.body;
+      if (!slug || !businessName) return res.status(400).json({ error: 'slug y businessName son obligatorios' });
+      const tenant = await deps.store.createTenant(req.body);
+      res.status(201).json(tenant);
+    } catch (error) {
+      logger.error('Tenant create error', { error: error.message });
+      res.status(500).json({ error: 'Error al crear tenant' });
+    }
+  });
+
+  app.get('/api/tenants/:slug', requireDashboardAuth, async (req, res) => {
+    try {
+      const tenant = await deps.store.getTenantBySlug(req.params.slug);
+      if (!tenant) return res.status(404).json({ error: 'Tenant no encontrado' });
+      res.json(tenant);
+    } catch (error) {
+      logger.error('Tenant get error', { error: error.message });
+      res.status(500).json({ error: 'Error al obtener tenant' });
+    }
+  });
+
+  app.put('/api/tenants/:slug', requireDashboardAuth, async (req, res) => {
+    try {
+      const tenant = await deps.store.updateTenant(req.params.slug, req.body);
+      if (!tenant) return res.status(404).json({ error: 'Tenant no encontrado' });
+      res.json(tenant);
+    } catch (error) {
+      logger.error('Tenant update error', { error: error.message });
+      res.status(500).json({ error: 'Error al actualizar tenant' });
+    }
+  });
+
+  app.delete('/api/tenants/:slug', requireDashboardAuth, async (req, res) => {
+    try {
+      await deps.store.deactivateTenant(req.params.slug);
+      res.json({ success: true });
+    } catch (error) {
+      logger.error('Tenant delete error', { error: error.message });
+      res.status(500).json({ error: 'Error al desactivar tenant' });
+    }
+  });
+
+  // ---- Tenant-scoped dashboard queries ----
+
+  app.get('/api/tenants/:slug/stats', requireDashboardAuth, async (req, res) => {
+    try {
+      const tenant = await deps.store.getTenantBySlug(req.params.slug);
+      if (!tenant) return res.status(404).json({ error: 'Tenant no encontrado' });
+      const stats = await deps.store.getTenantStats(tenant.id);
+      res.json(stats);
+    } catch (error) {
+      logger.error('Tenant stats error', { error: error.message });
+      res.status(500).json({ error: 'Error al obtener stats' });
+    }
+  });
+
+  app.get('/api/tenants/:slug/usage', requireDashboardAuth, async (req, res) => {
+    try {
+      const tenant = await deps.store.getTenantBySlug(req.params.slug);
+      if (!tenant) return res.status(404).json({ error: 'Tenant no encontrado' });
+      const usage = await deps.store.getUsageStats(tenant.id);
+      res.json(usage);
+    } catch (error) {
+      logger.error('Tenant usage error', { error: error.message });
+      res.status(500).json({ error: 'Error al obtener uso' });
+    }
+  });
+
+  app.get('/api/tenants/:slug/conversations', requireDashboardAuth, async (req, res) => {
+    try {
+      const tenant = await deps.store.getTenantBySlug(req.params.slug);
+      if (!tenant) return res.status(404).json({ error: 'Tenant no encontrado' });
+      const conversations = await deps.store.getActiveConversationsByTenant(tenant.id);
+      res.json(conversations);
+    } catch (error) {
+      logger.error('Tenant conversations error', { error: error.message });
+      res.status(500).json({ error: 'Error al obtener conversaciones' });
+    }
+  });
+
+  app.get('/api/tenants/:slug/leads', requireDashboardAuth, async (req, res) => {
+    try {
+      const tenant = await deps.store.getTenantBySlug(req.params.slug);
+      if (!tenant) return res.status(404).json({ error: 'Tenant no encontrado' });
+      const leads = await deps.store.getLeadsByTenant(tenant.id);
+      res.json(leads);
+    } catch (error) {
+      logger.error('Tenant leads error', { error: error.message });
+      res.status(500).json({ error: 'Error al obtener leads' });
+    }
+  });
+
+  app.get('/api/tenants/:slug/appointments', requireDashboardAuth, async (req, res) => {
+    try {
+      const tenant = await deps.store.getTenantBySlug(req.params.slug);
+      if (!tenant) return res.status(404).json({ error: 'Tenant no encontrado' });
+      const appointments = await deps.store.getAppointmentsByTenant(tenant.id);
+      res.json(appointments);
+    } catch (error) {
+      logger.error('Tenant appointments error', { error: error.message });
+      res.status(500).json({ error: 'Error al obtener citas' });
+    }
+  });
+
+  app.get('/api/tenants/:slug/handoffs', requireDashboardAuth, async (req, res) => {
+    try {
+      const tenant = await deps.store.getTenantBySlug(req.params.slug);
+      if (!tenant) return res.status(404).json({ error: 'Tenant no encontrado' });
+      const handoffs = await deps.store.getHandoffSessionsByTenant(tenant.id);
+      res.json(handoffs);
+    } catch (error) {
+      logger.error('Tenant handoffs error', { error: error.message });
+      res.status(500).json({ error: 'Error al obtener handoffs' });
+    }
+  });
+
+  // ---- Scheduling ----
+
+  app.get('/api/availability', async (req, res) => {
+    try {
+      const { date } = req.query;
+      if (!date) return res.status(400).json({ error: 'date es obligatorio (YYYY-MM-DD)' });
+      const slug = req.query.tenant || '';
+      const tenant = slug ? await deps.store.getTenantBySlug(slug) : null;
+      const calendarConfig = tenant?.calendar_config || config.calendar;
+      const { createProvider } = require('../outbound/google-calendar-provider');
+      const cal = createProvider(calendarConfig);
+      const availability = await cal.getAvailability(date);
+      res.json(availability);
+    } catch (error) {
+      logger.error('Availability error', { error: error.message });
+      res.status(500).json({ error: 'Error al consultar disponibilidad' });
+    }
+  });
+
+  app.post('/api/appointments', async (req, res) => {
+    try {
+      const { email, name, phone, datetime, serviceInterest, tenant: slug } = req.body;
+      if (!email || !datetime) return res.status(400).json({ error: 'email y datetime son obligatorios' });
+      const tenant = slug ? await deps.store.getTenantBySlug(slug) : null;
+      const calendarConfig = tenant?.calendar_config || config.calendar;
+      const { createProvider } = require('../outbound/google-calendar-provider');
+      const cal = createProvider(calendarConfig);
+      const event = await cal.bookAppointment(name || email, email, datetime);
+      const appointment = await deps.store.saveAppointment({
+        tenantId: tenant?.id || null,
+        contactEmail: email,
+        contactName: name,
+        contactPhone: phone,
+        googleEventId: event.id,
+        serviceInterest,
+        startTime: event.start,
+        endTime: event.end,
+        metadata: { hangoutLink: event.hangoutLink, htmlLink: event.htmlLink },
+      });
+      res.status(201).json({ appointment, event });
+    } catch (error) {
+      logger.error('Appointment create error', { error: error.message });
+      res.status(500).json({ error: 'Error al crear cita' });
+    }
+  });
+
+  app.get('/api/appointments', requireDashboardAuth, async (req, res) => {
+    try {
+      const { email, tenant: slug } = req.query;
+      const tenant = slug ? await deps.store.getTenantBySlug(slug) : null;
+      const tenantId = tenant?.id || null;
+      let appointments;
+      if (email) {
+        appointments = await deps.store.getAppointmentsByEmail(tenantId, email);
+      } else if (tenantId) {
+        appointments = await deps.store.getAppointmentsByTenant(tenantId);
+      } else {
+        appointments = [];
+      }
+      res.json(appointments);
+    } catch (error) {
+      logger.error('Appointments list error', { error: error.message });
+      res.status(500).json({ error: 'Error al obtener citas' });
+    }
+  });
+
+  app.delete('/api/appointments/:id', requireDashboardAuth, async (req, res) => {
+    try {
+      await deps.store.cancelAppointment(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      logger.error('Appointment cancel error', { error: error.message });
+      res.status(500).json({ error: 'Error al cancelar cita' });
     }
   });
 

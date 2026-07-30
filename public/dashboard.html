@@ -36,6 +36,23 @@ tr:hover td{background:#f8fafc}
 .badge{padding:3px 10px;border-radius:20px;font-size:12px;font-weight:500}
 .badge-whatsapp{background:#22c55e20;color:#16a34a}
 .badge-web{background:#3b82f620;color:#2563eb}
+.badge-starter{background:#e2e8f020;color:#64748b}
+.badge-business{background:#3b82f620;color:#2563eb}
+.badge-pro{background:#eab30820;color:#a16207}
+.badge-enterprise{background:#ef444420;color:#dc2626}
+.badge-confirmed{background:#22c55e20;color:#16a34a}
+.badge-cancelled{background:#ef444420;color:#dc2626}
+.badge-pending{background:#eab30820;color:#a16207}
+.form-group{margin-bottom:12px}
+.form-group label{display:block;font-size:13px;color:#64748b;margin-bottom:4px}
+.form-group input,.form-group select{width:100%;padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;font-family:inherit}
+.form-group input:focus,.form-group select:focus{border-color:#2563eb;outline:none}
+.form-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+.form-actions button{padding:8px 20px;border-radius:8px;font-size:14px;cursor:pointer;border:none}
+.btn-primary{background:#2563eb;color:#fff}
+.btn-primary:hover{background:#1d4ed8}
+.btn-secondary{background:#f1f5f9;color:#475569}
+.btn-secondary:hover{background:#e2e8f0}
 .msg-preview{max-width:350px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#475569;font-size:13px}
 .clickable{cursor:pointer;color:#2563eb;font-weight:500}
 .clickable:hover{text-decoration:underline}
@@ -93,6 +110,8 @@ tr:hover td{background:#f8fafc}
     <button class="tab active" data-tab="conversations">Conversaciones</button>
     <button class="tab" data-tab="handoffs">Handoffs</button>
     <button class="tab" data-tab="leads">Leads</button>
+    <button class="tab" data-tab="clients">Clientes</button>
+    <button class="tab" data-tab="appointments">Citas</button>
   </div>
 
   <div class="panel active" id="panel-conversations">
@@ -121,14 +140,43 @@ tr:hover td{background:#f8fafc}
       </table>
     </div>
   </div>
+
+  <div class="panel" id="panel-clients">
+    <div style="margin-bottom:12px">
+      <button class="refresh-btn" id="newClientBtn" style="background:#2563eb;border-color:#2563eb">+ Nuevo Cliente</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Slug</th><th>Negocio</th><th>Plan</th><th>Uso (Conversaciones)</th><th>WhatsApp</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <tbody id="clients-tbody"><tr><td colspan="7" class="empty">Cargando...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-appointments">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Cliente</th><th>Email</th><th>Servicio</th><th>Fecha</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <tbody id="appointments-tbody"><tr><td colspan="6" class="empty">Cargando...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
 </div>
 
 <div class="modal-overlay" id="modal">
   <div class="modal">
-    <div class="modal-header"><h2>Conversación</h2><button class="modal-close" id="modalClose">✕</button></div>
+    <div class="modal-header"><h2>Conversación</h2><button class="modal-close" id="modalClose">×</button></div>
     <div class="modal-info" id="modalInfo"></div>
     <div class="modal-body" id="modalBody"></div>
   </div>
+</div>
+
+<div class="modal-overlay" id="clientModal">
+  <div class="modal">
+    <div class="modal-header"><h2 id="clientModalTitle">Nuevo Cliente</h2><button class="modal-close" onclick="$('clientModal').classList.remove('open')">×</button></div>
+    <div class="modal-body" id="clientModalBody" style="gap:12px"></div>
+  </div>
+</div>
 </div>
 
 <script>
@@ -239,6 +287,143 @@ async function loadAll() {
   $('last-update').textContent = new Date().toLocaleTimeString('es-ES');
 }
 
+async function loadClients() {
+  try {
+    const tenants = await fetchJSON('/api/tenants');
+    var usages = {};
+    for (var i = 0; i < tenants.length; i++) {
+      try {
+        var u = await fetchJSON('/api/tenants/' + tenants[i].slug + '/usage');
+        usages[tenants[i].slug] = u;
+      } catch(e) { /* ignore */ }
+    }
+    renderClients(tenants, usages);
+  } catch (e) { /* ignore */ }
+}
+
+async function loadAppointments() {
+  try {
+    const apps = await fetchJSON('/api/appointments');
+    renderAppointments(apps);
+  } catch (e) { /* ignore */ }
+}
+
+function planBadge(plan) {
+  var cls = 'badge badge-' + (plan || 'starter');
+  return '<span class="' + cls + '">' + (plan || 'starter').toUpperCase() + '</span>';
+}
+
+function statusBadge(status) {
+  var cls = 'badge badge-' + (status || 'confirmed');
+  return '<span class="' + cls + '">' + (status || 'confirmed') + '</span>';
+}
+
+function quotaBar(used, limit) {
+  if (limit === -1) return '<span style="font-size:12px;color:#22c55e">Ilimitado</span>';
+  var pct = Math.min(100, Math.round((used / limit) * 100));
+  var color = pct > 90 ? '#ef4444' : pct > 70 ? '#eab308' : '#22c55e';
+  return '<div style="display:flex;align-items:center;gap:8px"><div style="flex:1;height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden"><div style="height:100%;width:' + pct + '%;background:' + color + ';border-radius:3px"></div></div><span style="font-size:12px;white-space:nowrap">' + used + '/' + limit + '</span></div>';
+}
+
+function renderClients(tenants, usages) {
+  usages = usages || {};
+  var tb = $('clients-tbody');
+  if (!tenants || tenants.length === 0) { tb.innerHTML = '<tr><td colspan="7" class="empty">Sin clientes. Crea el primero con el boton + Nuevo Cliente</td></tr>'; return; }
+  tb.innerHTML = tenants.map(function (t) {
+    var u = usages[t.slug] || {};
+    var used = u.conversations || 0;
+    var limit = t.plan === 'starter' ? 100 : t.plan === 'business' ? 500 : -1;
+    return '<tr><td><strong>' + esc(t.slug) + '</strong></td>' +
+      '<td>' + esc(t.business_name) + '</td>' +
+      '<td>' + planBadge(t.plan) + '</td>' +
+      '<td style="min-width:180px">' + quotaBar(used, limit) + '</td>' +
+      '<td>' + (t.whatsapp_phone || '—') + '</td>' +
+      '<td>' + (t.is_active ? '<span style="color:#22c55e">Activo</span>' : '<span style="color:#ef4444">Inactivo</span>') + '</td>' +
+      '<td><button class="refresh-btn" onclick="editClient(\'' + esc(t.slug) + '\')" style="padding:4px 12px;font-size:12px;margin-right:4px">Editar</button>' +
+      '<button class="refresh-btn" onclick="deleteClient(\'' + esc(t.slug) + '\')" style="padding:4px 12px;font-size:12px;background:#ef4444;border-color:#ef4444">X</button></td></tr>';
+  }).join('');
+}
+
+function renderAppointments(apps) {
+  var tb = $('appointments-tbody');
+  if (!apps || apps.length === 0) { tb.innerHTML = '<tr><td colspan="6" class="empty">Sin citas agendadas</td></tr>'; return; }
+  tb.innerHTML = apps.map(function (a) {
+    return '<tr><td><strong>' + esc(a.contact_name || '—') + '</strong></td>' +
+      '<td>' + esc(a.contact_email) + '</td>' +
+      '<td>' + esc(a.service_interest || '—') + '</td>' +
+      '<td>' + (a.start_time ? new Date(a.start_time).toLocaleString('es-ES', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—') + '</td>' +
+      '<td>' + statusBadge(a.status) + '</td>' +
+      '<td>' + (a.status === 'confirmed' ? '<button class="refresh-btn" onclick="cancelAppointment(\'' + esc(a.id) + '\')" style="padding:4px 12px;font-size:12px;background:#ef4444;border-color:#ef4444">Cancelar</button>' : '') + '</td></tr>';
+  }).join('');
+}
+
+async function cancelAppointment(id) {
+  if (!confirm('Cancelar esta cita?')) return;
+  try {
+    await fetch('/api/appointments/' + id, { method:'DELETE' });
+    loadAppointments();
+  } catch(e) { alert('Error al cancelar cita'); }
+}
+
+function showClientForm(data) {
+  data = data || {};
+  $('clientModalTitle').textContent = data.slug ? 'Editar Cliente' : 'Nuevo Cliente';
+  $('clientModalBody').innerHTML =
+    '<div class="form-group"><label>Slug</label><input id="f-slug" value="' + (data.slug || '') + '" ' + (data.slug ? 'readonly' : '') + '></div>' +
+    '<div class="form-group"><label>Nombre del Negocio</label><input id="f-name" value="' + (data.business_name || '') + '"></div>' +
+    '<div class="form-group"><label>Servicios</label><input id="f-services" value="' + (data.business_services || '') + '"></div>' +
+    '<div class="form-group"><label>Plan</label><select id="f-plan"><option value="starter"' + (data.plan==='starter'?' selected':'') + '>Starter</option><option value="business"' + (data.plan==='business'?' selected':'') + '>Business</option><option value="pro"' + (data.plan==='pro'?' selected':'') + '>Pro</option><option value="enterprise"' + (data.plan==='enterprise'?' selected':'') + '>Enterprise</option></select></div>' +
+    '<div class="form-group"><label>WhatsApp (número)</label><input id="f-wa" value="' + (data.whatsapp_phone || '') + '"></div>' +
+    '<div class="form-group"><label>Nombre del Dueño</label><input id="f-owner" value="' + (data.owner_name || '') + '"></div>' +
+    '<div class="form-group"><label>Email del Dueño</label><input id="f-owner-email" value="' + (data.owner_email || '') + '"></div>' +
+    '<div class="form-actions"><button class="btn-secondary" onclick="$(\'clientModal\').classList.remove(\'open\')">Cancelar</button><button class="btn-primary" onclick="saveClient(\'' + (data.slug || '') + '\')">Guardar</button></div>';
+  $('clientModal').classList.add('open');
+}
+
+async function saveClient(slug) {
+  var body = {
+    slug: $('f-slug').value,
+    businessName: $('f-name').value,
+    businessServices: $('f-services').value,
+    plan: $('f-plan').value,
+    whatsappPhone: $('f-wa').value,
+    ownerName: $('f-owner').value,
+    ownerEmail: $('f-owner-email').value,
+  };
+  if (!body.slug || !body.businessName) { alert('Slug y Nombre son obligatorios'); return; }
+  try {
+    if (slug) {
+      await fetch('/api/tenants/' + slug, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+    } else {
+      await fetch('/api/tenants', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+    }
+    $('clientModal').classList.remove('open');
+    loadClients();
+  } catch(e) { alert('Error al guardar cliente'); }
+}
+
+async function editClient(slug) {
+  try {
+    var t = await fetchJSON('/api/tenants/' + slug);
+    showClientForm(t);
+  } catch(e) { alert('Error al cargar cliente'); }
+}
+
+async function deleteClient(slug) {
+  if (!confirm('Desactivar cliente ' + slug + '?')) return;
+  try {
+    await fetch('/api/tenants/' + slug, { method:'DELETE' });
+    loadClients();
+  } catch(e) { alert('Error al desactivar cliente'); }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  loadClients();
+  loadAppointments();
+  $('newClientBtn').addEventListener('click', function() { showClientForm({}); });
+  $('clientModal').addEventListener('click', function(e) { if (e.target === $('clientModal')) $('clientModal').classList.remove('open'); });
+});
+
 async function openConversation(id) {
   try {
     const data = await fetchJSON('/api/dashboard/conversations/' + id);
@@ -268,10 +453,12 @@ document.querySelectorAll('.tab').forEach(tab => {
   };
 });
 
-$('refreshBtn').onclick = loadAll;
+$('refreshBtn').onclick = function() { loadAll(); loadClients(); loadAppointments(); };
 
 loadAll();
-pollTimer = setInterval(loadAll, POLL_INTERVAL);
+loadClients();
+loadAppointments();
+pollTimer = setInterval(function() { loadAll(); loadClients(); loadAppointments(); }, POLL_INTERVAL);
 </script>
 </body>
 </html>

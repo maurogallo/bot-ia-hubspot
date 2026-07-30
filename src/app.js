@@ -4,14 +4,18 @@ const config = require('./config');
 const { createStore } = require('./adapters/outbound/postgres-store');
 const { createProvider: createAI } = require('./adapters/outbound/ollama-provider');
 const { createProvider: createCRM } = require('./adapters/outbound/hubspot-provider');
+const { createProvider: createCalendar } = require('./adapters/outbound/google-calendar-provider');
 const { createApp } = require('./adapters/inbound/express-adapter');
 const { createAdapter: createWebJSWA } = require('./adapters/inbound/whatsapp-adapter');
 const { createAdapter: createMetaWA } = require('./adapters/inbound/meta-whatsapp-adapter');
 const { handleMessage } = require('./domain/use-cases');
+const { createResolver } = require('./middleware/tenant-resolver');
 
 const store = createStore();
 const ai = createAI();
 const crm = createCRM();
+const calendar = createCalendar(config.calendar);
+const tenantResolver = createResolver(store);
 
 const KNOWLEDGE_SEED = [
   { content: 'NeoWeb Studio es una agencia especializada en desarrollo web, landing pages y automatización de procesos. Fundada para ayudar a pymes y emprendedores a tener presencia digital profesional sin pagar costos excesivos.', metadata: { type: 'company_info' } },
@@ -24,6 +28,8 @@ const KNOWLEDGE_SEED = [
   { content: 'Casos de éxito: Clientes han aumentado sus ventas hasta un 40% después de tener una landing page profesional con captura de leads automatizada.', metadata: { type: 'social_proof' } },
   { content: 'Diferenciador: Usamos inteligencia artificial local (Ollama) para nuestros chatbots, lo que significa que tus datos nunca salen de tu infraestructura. Privacidad y seguridad total.', metadata: { type: 'differentiator' } },
   { content: 'Garantía: Todos nuestros trabajos incluyen revisiones ilimitadas durante el desarrollo y 30 días de soporte post-entrega sin costo adicional.', metadata: { type: 'guarantee' } },
+  { content: 'Agendamiento: Ofrecemos reuniones de 30 minutos de lunes a viernes de 9:00 a 18:00 hora Argentina. Si necesitas otro horario, consultanos.', metadata: { type: 'scheduling' } },
+  { content: 'Para agendar una reunion necesitamos tu nombre, email y el servicio que te interesa. La reunion es por Google Meet y recibis la invitacion automatica en tu calendario.', metadata: { type: 'scheduling_process' } },
 ];
 
 async function seedKnowledge() {
@@ -44,7 +50,7 @@ async function seedKnowledge() {
   }
 }
 
-const deps = { store, ai, crm, handleMessage };
+const deps = { store, ai, crm, calendar, handleMessage, tenantResolver };
 
 const createWhatsApp = config.whatsapp.driver === 'meta' ? createMetaWA : createWebJSWA;
 const whatsapp = createWhatsApp(deps);

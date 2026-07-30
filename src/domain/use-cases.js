@@ -1,4 +1,5 @@
 const logger = require('../logger');
+const { getTenantFeatures, getQuotaLimit } = require('./tenant-features');
 
 function extractMemoryFacts(leadData, message) {
   const facts = {};
@@ -23,8 +24,27 @@ function detectHandoffInMessage(message) {
   return HANDOFF_KEYWORDS.some(k => lower.includes(k));
 }
 
-async function handleMessage({ message, from, channel, store, ai, crm }) {
-  const session = await store.getOrCreateSession(channel, null, from);
+async function handleMessage({ message, from, channel, store, ai, crm, calendar, tenant = null }) {
+  const features = getTenantFeatures(tenant);
+  const tenantId = tenant?.id || null;
+
+  if (tenant) {
+    const quotaLimit = getQuotaLimit(tenant, 'conversations');
+    if (quotaLimit !== -1 && typeof store.getMonthlyUsage === 'function') {
+      const usage = await store.getMonthlyUsage(tenantId, 'conversations');
+      if (usage >= quotaLimit) {
+        logger.warn('Quota exceeded for tenant', { tenantId, slug: tenant.slug, usage, limit: quotaLimit });
+        const quotaMsg = 'Lo siento, hemos alcanzado el limite de conversaciones de este mes. Por favor contacta a tu proveedor para ampliar el plan.';
+        return { response: quotaMsg, leadData: null, handoffNeeded: false, quotaExceeded: true };
+      }
+    }
+  }
+
+  const session = await store.getOrCreateSession(channel, null, from, tenantId);
+
+  if (tenant && typeof store.logUsage === 'function') {
+    await store.logUsage(tenantId, 'conversations', 1);
+  }
 
   await store.addMessage(session.id, 'user', message);
 
@@ -34,16 +54,28 @@ async function handleMessage({ message, from, channel, store, ai, crm }) {
   const memory = typeof store.getMemory === 'function' ? await store.getMemory(session.id) : {};
 
   let knowledgeDocs = [];
-  if (typeof ai.generateEmbedding === 'function' && typeof store.searchKnowledge === 'function') {
+  if (features.knowledgeBase && typeof ai.generateEmbedding === 'function' && typeof store.searchKnowledge === 'function') {
     try {
       const embedding = await ai.generateEmbedding(message);
-      knowledgeDocs = await store.searchKnowledge(embedding, 3);
+      if (tenantId && typeof store.searchKnowledgeForTenant === 'function') {
+        knowledgeDocs = await store.searchKnowledgeForTenant(embedding, 3, tenantId);
+      } else {
+        knowledgeDocs = await store.searchKnowledge(embedding, 3);
+      }
     } catch (err) {
       logger.warn('RAG knowledge search failed', { error: err.message, sessionId: session.id });
     }
   }
 
-  const { response, leadData } = await ai.generateResponse(session.id, history, memory, knowledgeDocs);
+  const missingData = [];
+  if (!memory.contact_name) missingData.push('nombre');
+  if (!memory.contact_email) missingData.push('email');
+  if (!memory.contact_phone) missingData.push('teléfono');
+  if (missingData.length > 0) {
+    knowledgeDocs.push(`INSTRUCCIÓN: Aún no tienes el ${missingData.join(', ')} del cliente. Debes preguntarlo en tu siguiente mensaje.`);
+  }
+
+  const { response, leadData } = await ai.generateResponse(session.id, history, memory, knowledgeDocs, tenant);
 
   await store.addMessage(session.id, 'assistant', response, { leadData });
 
@@ -58,7 +90,7 @@ async function handleMessage({ message, from, channel, store, ai, crm }) {
 
   const hasLeadInfo = leadData.lead?.email && (leadData.intent === 'lead' || leadData.confidence >= 0.7);
 
-  if (hasLeadInfo) {
+  if (hasLeadInfo && features.crm) {
     let contact = null;
     try {
       contact = await crm.getOrCreateContact(leadData.lead.email, {
@@ -71,6 +103,7 @@ async function handleMessage({ message, from, channel, store, ai, crm }) {
         name: leadData.lead.name,
         email: leadData.lead.email,
         phone: leadData.lead.phone || from,
+        tenantId,
       });
     } catch (err) {
       throw err;
@@ -102,7 +135,132 @@ async function handleMessage({ message, from, channel, store, ai, crm }) {
     return { response: handoffResponse, leadData, handoffNeeded: true };
   }
 
+  if (leadData.intent === 'schedule' && features.scheduling && calendar) {
+    const schedResult = await handleScheduling({
+      session, leadData, message, from, store, calendar, tenant, tenantId,
+      memory,
+    });
+    if (schedResult) return { ...schedResult, handoffNeeded: false };
+  }
+
   return { response, leadData, handoffNeeded: false };
 }
 
-module.exports = { handleMessage };
+function proposeTimeSlots(slots) {
+  if (!slots || slots.length === 0) {
+    return 'Lo siento, no tengo horarios disponibles ese dia. Queres intentar con otro dia?';
+  }
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const lines = slots.slice(0, 6).map((s, i) => `${letters[i]}) ${s.label}`);
+  return `Estos son los horarios disponibles:\n${lines.join('\n')}\n\nCual te queda mejor? Responde con la letra.`;
+}
+
+async function handleScheduling({ session, leadData, message, from, store, calendar, tenant, tenantId, memory }) {
+  const { scheduling } = leadData;
+  if (!scheduling) return null;
+
+  const email = memory.contact_email;
+  const name = memory.contact_name;
+
+  if (scheduling.action === 'request_availability') {
+    let dateStr = scheduling.preferred_date;
+    if (!dateStr) {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      dateStr = tomorrow.toISOString().split('T')[0];
+    }
+
+    try {
+      const { slots } = await calendar.getAvailability(dateStr);
+      const response = proposeTimeSlots(slots);
+
+      const schedulingLeadData = {
+        ...leadData,
+        scheduling: { ...scheduling, proposed_slots: slots.slice(0, 6), pending_date: dateStr },
+      };
+
+      await store.addMessage(session.id, 'assistant', response, { leadData: schedulingLeadData });
+
+      return { response, leadData: schedulingLeadData };
+    } catch (err) {
+      logger.error('Scheduling availability error', { error: err.message, tenantId });
+      return {
+        response: 'Lo siento, tuve un problema al verificar la disponibilidad. Intenta mas tarde.',
+        leadData,
+      };
+    }
+  }
+
+  if (scheduling.action === 'confirm_slot') {
+    const preferredSlot = scheduling.preferred_date && scheduling.preferred_time
+      ? `${scheduling.preferred_date}T${scheduling.preferred_time}:00`
+      : null;
+
+    if (!preferredSlot || !email) {
+      return {
+        response: 'Necesito tu email y un horario confirmado para agendar la reunion.',
+        leadData,
+      };
+    }
+
+    try {
+      const event = await calendar.bookAppointment(name || email, email, preferredSlot);
+
+      await store.saveAppointment({
+        tenantId,
+        sessionId: session.id,
+        contactEmail: email,
+        contactName: name,
+        contactPhone: from,
+        googleEventId: event.id,
+        serviceInterest: memory.service_interest,
+        startTime: event.start,
+        endTime: event.end,
+        metadata: { hangoutLink: event.hangoutLink, htmlLink: event.htmlLink },
+      });
+
+      const dateFormatted = new Date(event.start).toLocaleString('es-ES', {
+        weekday: 'long', day: 'numeric', month: 'long',
+        hour: '2-digit', minute: '2-digit',
+      });
+
+      let confirmMsg = `Listo ${name || ''}! Te envie la invitacion a ${email}. `;
+      confirmMsg += `Nos vemos el ${dateFormatted}`;
+      if (event.hangoutLink) confirmMsg += `\n\nLink de Google Meet: ${event.hangoutLink}`;
+
+      await store.addMessage(session.id, 'assistant', confirmMsg, {
+        leadData: { ...leadData, scheduling: { ...scheduling, event: event.id, meet: event.hangoutLink } },
+      });
+
+      return { response: confirmMsg, leadData };
+    } catch (err) {
+      logger.error('Scheduling booking error', { error: err.message, tenantId });
+      return {
+        response: 'Lo siento, no pude agendar la reunion. Intenta de nuevo mas tarde.',
+        leadData,
+      };
+    }
+  }
+
+  if (scheduling.action === 'cancel') {
+    try {
+      const appointments = await store.getAppointmentsByEmail(tenantId, email);
+      if (appointments.length > 0) {
+        await store.cancelAppointment(appointments[0].id);
+      }
+      return {
+        response: 'Listo, la reunion fue cancelada. Queres agendar otra fecha?',
+        leadData,
+      };
+    } catch (err) {
+      return {
+        response: 'No pude cancelar la reunion. Contacta a soporte por favor.',
+        leadData,
+      };
+    }
+  }
+
+  return null;
+}
+
+module.exports = { handleMessage, proposeTimeSlots };

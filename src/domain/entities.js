@@ -14,4 +14,9 @@ function Lead({ name = null, email = null, phone = null, serviceInterest = null 
   return Object.freeze({ name, email, phone, serviceInterest });
 }
 
-module.exports = { Session, Message, Lead };
+function Appointment({ id, tenantId, sessionId, contactEmail, contactName = null, contactPhone = null, googleEventId = null, serviceInterest = null, startTime, endTime, status = 'confirmed' }) {
+  if (!id) id = crypto.randomUUID();
+  return Object.freeze({ id, tenantId, sessionId, contactEmail, contactName, contactPhone, googleEventId, serviceInterest, startTime, endTime, status });
+}
+
+module.exports = { Session, Message, Lead, Appointment };

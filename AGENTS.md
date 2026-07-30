@@ -23,6 +23,8 @@ Anuncio en Instagram/Facebook/TikTok/X
 | CRM | HubSpot (Service Key) | ✅ Implementado |
 | WhatsApp | whatsapp-web.js (sesión persistente) | ✅ Implementado |
 | Chat web | Widget JS embebible | ✅ Implementado |
+| Agendamiento | Google Calendar API (Service Account) | ✅ Implementado |
+| Multi-tenant | Resolución por widget/WhatsApp/header | ✅ Implementado |
 | Infraestructura | Docker Compose | ✅ Implementado |
 | CI/CD | GitHub Actions | ✅ Completado |
 | Entornos | Dev / Staging / Prod via Docker Compose | ✅ Completado |
@@ -208,13 +210,110 @@ No inventes información que no esté aquí.
 | — | Deduplicación de mensajes WhatsApp | Alta | ✅ Completado |
 | — | Chromium lock fix permanente | Alta | ✅ Completado |
 | 2 | Meta WhatsApp Business API (alternativa producción) | Alta | ✅ Implementado |
-| 3 | Tests automatizados (Jest, unitarios + integración) | Alta | ✅ Completado (34 tests) |
+| 3 | Tests automatizados (Jest, unitarios + integración) | Alta | ✅ Completado (64 tests) |
 | 5 | Creación automática de deals en HubSpot | Media | ✅ Completado |
 | 6 | Analíticas de conversión y métricas | Media | 📝 Pendiente |
 | 7 | Verificación de firmas HMAC en webhooks | Alta | ✅ Completado |
 | 8 | Soporte multilingüe (inglés, portugués) | Baja | 📝 Pendiente |
 | 9 | CI/CD con GitHub Actions | Alta | ✅ Completado |
 | 10 | Configuración de entornos (dev/staging/prod) | Alta | ✅ Completado |
+| 11 | Arquitectura multi-tenant (tabla tenants, resolver, feature gating) | Alta | ✅ Completado |
+| 12 | Google Calendar agendamiento automático | Alta | ✅ Completado |
+| 13 | Dashboard de clientes y citas | Alta | ✅ Completado |
+| 14 | Sistema de quotas por plan | Alta | ✅ Completado |
+| 15 | Knowledge base por tenant | Alta | ✅ Completado |
+
+## Arquitectura Multi-Tenant
+
+### Tabla tenants
+```sql
+tenants (id, slug, business_name, business_services, plan, features, calendar_config, hubspot_config, whatsapp_phone, whatsapp_phone_number_id, owner_name, owner_email, owner_phone, is_active)
+```
+
+### Planes y features
+| Plan | Agentes | Conversaciones/mes | Scheduling | CRM | Knowledge Base |
+|---|---|---|---|---|---|
+| Starter ($29/mes) | 1 | 100 | ❌ | ❌ | ❌ |
+| Business ($79/mes) | 2 | 500 | ✅ | ✅ | ✅ |
+| Pro ($149/mes) | Ilimitados | Ilimitadas | ✅ | ✅ | ✅ |
+| Enterprise ($299/mes) | Ilimitados | Ilimitadas | ✅ | ✅ | ✅ |
+
+### Resolución de tenant
+- **Widget web**: `data-tenant="slug"` → `POST { tenant: "slug" }` → `store.getTenantBySlug()`
+- **WhatsApp web.js**: `message.from` → `store.getTenantByPhone()`
+- **Meta WhatsApp**: `metadata.phone_number_id` → `store.getTenantByPhoneNumberId()`
+- **API**: header `X-Tenant: slug` o body `{ "tenant": "slug" }`
+- **Fallback**: `store.getDefaultTenant()` → tenant con slug `"default"` o el más antiguo
+
+### Feature gating en handleMessage
+```
+handleMessage({ tenant, ... })
+  → getTenantFeatures(tenant)  → { scheduling: true/false, crm: true/false, knowledgeBase: true/false }
+  → checkQuota(tenant, 'conversations')  → si excedido → "limite alcanzado"
+  → if features.knowledgeBase → RAG search (tenant-aware)
+  → if features.crm → HubSpot contact + deal creation
+  → if features.scheduling → handleScheduling (Google Calendar)
+```
+
+### Tablas multi-tenant
+- `sessions.tenant_id` → FK a tenants
+- `contacts.tenant_id` → FK a tenants
+- `appointments.tenant_id` → FK a tenants
+- `knowledge.tenant_id` → FK a tenants (NULL = global)
+- `usage_log` → tracking de conversaciones por tenant por mes
+
+## Agendamiento con Google Calendar
+
+### Flujo
+```
+Usuario: "Quiero agendar una reunion"
+  → LLM: intent="schedule", scheduling.action="request_availability"
+  → calendar.getAvailability(fecha) → slots libres
+  → Bot: "A) 10:00 AM  B) 14:00 PM  C) 16:00 PM"
+  → Widget: renderiza 3 botones clickeables
+  
+Usuario: clickea "14:00 PM"
+  → LLM: intent="schedule", scheduling.action="confirm_slot"
+  → calendar.bookAppointment(name, email, datetime) → Google Meet
+  → store.saveAppointment(...)
+  → Bot: "Listo! Te envié la invitación. Nos vemos el..."
+```
+
+### Google Calendar Service Account
+- Auth: JWT con `clientEmail` + `privateKey`
+- Métodos: `getAvailability`, `bookAppointment`, `getScheduledAppointments`, `cancelEvent`
+- Cada tenant puede tener su propia `calendar_config`
+- Soporta timezone personalizado (`BUSINESS_TIMEZONE`)
+
+### Tabla appointments
+```sql
+appointments (id, tenant_id, session_id, contact_email, contact_name, contact_phone, google_event_id, service_interest, start_time, end_time, status, metadata)
+```
+
+## Nuevos Endpoints
+
+### Tenants
+| Ruta | Método | Descripción |
+|---|---|---|
+| `/api/tenants` | GET | Listar todos los tenants |
+| `/api/tenants` | POST | Crear nuevo tenant |
+| `/api/tenants/:slug` | GET | Detalle de un tenant |
+| `/api/tenants/:slug` | PUT | Editar tenant |
+| `/api/tenants/:slug` | DELETE | Desactivar tenant |
+| `/api/tenants/:slug/stats` | GET | Stats del tenant |
+| `/api/tenants/:slug/usage` | GET | Uso mensual (conversaciones) |
+| `/api/tenants/:slug/conversations` | GET | Conversaciones del tenant |
+| `/api/tenants/:slug/leads` | GET | Leads del tenant |
+| `/api/tenants/:slug/appointments` | GET | Citas del tenant |
+| `/api/tenants/:slug/handoffs` | GET | Handoffs del tenant |
+
+### Agendamiento
+| Ruta | Método | Descripción |
+|---|---|---|
+| `/api/availability?date=YYYY-MM-DD&tenant=slug` | GET | Slots disponibles |
+| `/api/appointments` | POST | Crear cita |
+| `/api/appointments?email=x&tenant=slug` | GET | Listar citas |
+| `/api/appointments/:id` | DELETE | Cancelar cita |
 
 ## Mejoras a futuro
 

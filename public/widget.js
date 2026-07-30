@@ -5,6 +5,7 @@
     primary: document.currentScript.getAttribute('data-primary') || '#2563eb',
     apiUrl: document.currentScript.getAttribute('data-api-url') || '/api/webhook',
     webhookSecret: document.currentScript.getAttribute('data-webhook-secret') || '',
+    tenant: document.currentScript.getAttribute('data-tenant') || '',
   };
 
   var visitorId = localStorage.getItem('nw_visitor_id');
@@ -113,6 +114,77 @@
 
   function setTyping(show) { typingEl.style.display = show ? 'flex' : 'none'; messagesEl.scrollTop = messagesEl.scrollHeight; }
 
+  function renderSlotButtons(slots) {
+    var container = document.createElement('div');
+    container.style.cssText = 'align-self:flex-start;display:flex;flex-wrap:wrap;gap:6px;max-width:85%;padding:4px 0';
+    container.className = 'nw-slot-buttons';
+    slots.forEach(function (slot) {
+      var btn = document.createElement('button');
+      btn.textContent = slot.label;
+      btn.style.cssText = 'padding:8px 14px;border:1px solid ' + cfg.primary + ';border-radius:8px;background:#fff;color:' + cfg.primary + ';cursor:pointer;font-size:13px;font-family:inherit;transition:all .2s';
+      btn.addEventListener('mouseenter', function () { btn.style.background = cfg.primary; btn.style.color = '#fff'; });
+      btn.addEventListener('mouseleave', function () { btn.style.background = '#fff'; btn.style.color = cfg.primary; });
+      btn.addEventListener('click', function () {
+        var confirmMsg = 'Esa opcion la tomo como: ' + slot.label + ' (' + slot.value + ')';
+        addMessage(slot.label, 'user');
+        var sel = input; sel.value = ''; sel.disabled = false;
+        var allBtns = messagesEl.querySelectorAll('.nw-slot-buttons button');
+        for (var i = 0; i < allBtns.length; i++) { allBtns[i].disabled = true; allBtns[i].style.opacity = '0.5'; }
+        sendMessageByText('Confirmo el horario: ' + slot.label + ' (' + slot.value + ')');
+      });
+      container.appendChild(btn);
+    });
+    messagesEl.appendChild(container);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function sendMessageByText(text) {
+    sendBtn.disabled = true;
+    setTyping(true);
+    var bodyObj = { message: text, from: visitorId, channel: 'web' };
+    if (cfg.tenant) bodyObj.tenant = cfg.tenant;
+    var body = JSON.stringify(bodyObj);
+    var headers = { 'Content-Type': 'application/json' };
+    if (cfg.webhookSecret) {
+      hmacSign(body, cfg.webhookSecret).then(function (sig) { headers['X-Webhook-Signature'] = sig; });
+    }
+    fetch(cfg.apiUrl, {
+      method: 'POST', headers: headers, body: body,
+    })
+    .then(function (res) {
+      if (!res.ok) throw new Error('Error ' + res.status);
+      return res.json();
+    })
+    .then(function (data) {
+      setTyping(false);
+      sendBtn.disabled = false;
+      var reply = data.reply || data.message || 'Gracias por tu mensaje.';
+      addMessage(reply, 'bot');
+      tryExtractSlots(reply, data);
+    })
+    .catch(function () {
+      setTyping(false);
+      sendBtn.disabled = false;
+      addMessage('Lo siento, hubo un error. Por favor intenta de nuevo.', 'bot');
+    });
+  }
+
+  function tryExtractSlots(text, data) {
+    var slots = null;
+    if (data && data.leadData && data.leadData.scheduling && data.leadData.scheduling.proposed_slots) {
+      slots = data.leadData.scheduling.proposed_slots;
+    }
+    if (!slots && text) {
+      var match = text.match(/\[SLOTS\]([\s\S]*?)\[\/SLOTS\]/);
+      if (match) {
+        try { slots = JSON.parse(match[1]); } catch (e) { /* ignore */ }
+      }
+    }
+    if (slots && slots.length > 0) {
+      renderSlotButtons(slots);
+    }
+  }
+
   async function sendMessage() {
     var text = input.value.trim();
     if (!text) return;
@@ -121,7 +193,9 @@
     sendBtn.disabled = true;
     setTyping(true);
 
-    var body = JSON.stringify({ message: text, from: visitorId, channel: 'web' });
+    var bodyObj = { message: text, from: visitorId, channel: 'web' };
+    if (cfg.tenant) bodyObj.tenant = cfg.tenant;
+    var body = JSON.stringify(bodyObj);
     var headers = { 'Content-Type': 'application/json' };
     if (cfg.webhookSecret) headers['X-Webhook-Signature'] = await hmacSign(body, cfg.webhookSecret);
 
@@ -137,7 +211,9 @@
     .then(function (data) {
       setTyping(false);
       sendBtn.disabled = false;
-      addMessage(data.reply || data.message || 'Gracias por tu mensaje.', 'bot');
+      var reply = data.reply || data.message || 'Gracias por tu mensaje.';
+      addMessage(reply, 'bot');
+      tryExtractSlots(reply, data);
     })
     .catch(function () {
       setTyping(false);

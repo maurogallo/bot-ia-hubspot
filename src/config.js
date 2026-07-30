@@ -56,6 +56,14 @@ const config = {
     password: process.env.DASHBOARD_PASSWORD || '',
   },
 
+  calendar: {
+    clientEmail: process.env.GOOGLE_CLIENT_EMAIL || '',
+    privateKey: (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
+    calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
+    timezone: process.env.BUSINESS_TIMEZONE || 'America/Argentina/Buenos_Aires',
+    meetingDuration: parseInt(process.env.MEETING_DURATION_MINUTES, 10) || 30,
+  },
+
   webhookSecret: process.env.WEBHOOK_SECRET || '',
 };
 

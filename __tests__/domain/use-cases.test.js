@@ -19,7 +19,7 @@ describe('handleMessage', () => {
     expect(typeof result.response).toBe('string');
     expect(result.handoffNeeded).toBe(false);
 
-    expect(store.getOrCreateSession).toHaveBeenCalledWith('web', null, '+549111111');
+    expect(store.getOrCreateSession).toHaveBeenCalledWith('web', null, '+549111111', null);
     expect(store.addMessage).toHaveBeenCalledTimes(2);
     expect(ai.generateResponse).toHaveBeenCalled();
   });
