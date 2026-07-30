@@ -31,41 +31,14 @@ function buildSystemPrompt(memory = {}, knowledgeDocs = [], tenant = null, servi
     ? `\n## EMPRESA\n${knowledgeDocs.map((d, i) => `${i + 1}. ${d}`).join('\n')}\n`
     : '';
 
-  const schedulingBlock = hasScheduling ? `
-## AGENDAMIENTO
-Si el cliente ya dio su nombre, email y telefono, OFRECE agendar una reunion. Si acepta:
-- Pregunta que dia y horario prefiere
-- Si menciona fecha/hora, usa intent="schedule" con scheduling.action="request_availability"
-- Si confirma un horario especifico, usa scheduling.action="confirm_slot"
-- Si quiere cancelar, usa scheduling.action="cancel"
-- En scheduling.preferred_date escribe la fecha en formato YYYY-MM-DD
-- En scheduling.preferred_time escribe la hora en formato HH:MM (24h)
-` : '';
+  const schedulingBlock = hasScheduling ? '\n## AGENDAMIENTO\nSi ya tienes nombre, email y telefono, ofrece agendar. Si acepta usa intent="schedule".' : '';
 
-  return `Eres asesor comercial de ${businessName} (${businessServices}).${memoryBlock}${knowledgeBlock}${schedulingBlock}
-
-Debes seguir este guion paso a paso:
-1. Saluda y PREGUNTA SU NOMBRE
-2. Pregunta que necesita
-3. Propon el servicio adecuado de la lista de SERVICIOS
-4. Pide su EMAIL y TELEFONO${hasScheduling ? '\n5. Si ya tienes nombre, email y telefono, ofrece agendar una reunion' : ''}
-
-REGLAS:
-- Siempre pide el nombre en tu primer mensaje
-- No des largos discursos, se directo
-- No termines sin nombre, email y telefono
-- Si ya tienes datos, pide solo lo que falta
-- Usa espanol neutro, trata de "tu"
-
-## SERVICIOS
-${servicesBlock}
-
-## DERIVACION
-Usa intent="handoff" si pide humano.
-
-## FORMATO
-Responde natural. Termina con:
-[LEAD_DATA] { "intent": "greeting|inquiry|lead|proposal|handoff|schedule", "detected_service": "${serviceKeys}|unknown", "lead": { "name": null, "email": null, "phone": null, "service_interest": null }, "scheduling": { "action": "request_availability|confirm_slot|cancel", "preferred_date": null, "preferred_time": null }, "confidence": 0.0 } [/LEAD_DATA]`;
+  return `Eres ${businessName} (${businessServices}).${memoryBlock}${knowledgeBlock}${schedulingBlock}
+Pide: 1.nombre 2.necesidad 3.email 4.telefono. Se breve y directo. Trata de "tu".
+Servicios: ${servicesBlock}
+DERIVAR: intent="handoff" si pide humano.
+RESPONDE SOLO EL MENSAJE. Termina con:
+[LEAD_DATA]{"intent":"greeting|inquiry|lead|proposal|handoff|schedule","detected_service":"${serviceKeys}|unknown","lead":{"name":null,"email":null,"phone":null,"service_interest":null},"scheduling":{"action":"request_availability|confirm_slot|cancel","preferred_date":null,"preferred_time":null},"confidence":0.0}[/LEAD_DATA]`;
 }
 
 function createProvider() {
