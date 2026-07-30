@@ -372,10 +372,16 @@ function showClientForm(data) {
   var steps = !data.slug ? '<div style="display:flex;gap:4px;margin-bottom:12px"><span style="background:#2563eb;color:#fff;padding:4px 12px;border-radius:6px;font-size:12px;font-weight:600">Paso 1</span><span style="background:#f1f5f9;color:#64748b;padding:4px 12px;border-radius:6px;font-size:12px">Paso 2</span><span style="background:#f1f5f9;color:#64748b;padding:4px 12px;border-radius:6px;font-size:12px">Paso 3</span></div>' : '';
 
   $('clientModalBody').innerHTML = steps +
-    '<div class="form-group"><label>Slug</label><input id="f-slug" value="' + (data.slug || '') + '" placeholder="clinica-san-jose" ' + (data.slug ? 'readonly' : '') + '></div>' +
+    '<div class="form-group"><label>Slug (identificador unico)</label><input id="f-slug" value="' + (data.slug || '') + '" placeholder="clinica-san-jose" ' + (data.slug ? 'readonly' : '') + '></div>' +
     '<div class="form-group"><label>Nombre del Negocio</label><input id="f-name" value="' + (data.business_name || '') + '" placeholder="Clinica San Jose"></div>' +
     '<div class="form-group"><label>Descripcion de servicios</label><input id="f-services" value="' + (data.business_services || '') + '" placeholder="Consultas medicas, tratamientos, emergencias"></div>' +
-    '<div class="form-group"><label>Plan</label><select id="f-plan"><option value="starter"' + (data.plan==='starter'?' selected':'') + '>Starter ($29/mes) - Chat basico</option><option value="business"' + (data.plan==='business'?' selected':'') + '>Business ($79/mes) - Chat + CRM + Agendamiento</option><option value="pro"' + (data.plan==='pro'?' selected':'') + '>Pro ($149/mes) - Ilimitado + API</option><option value="enterprise"' + (data.plan==='enterprise'?' selected':'') + '>Enterprise ($299/mes) - Todo + Soporte</option></select></div>' +
+    '<div class="form-group"><label>Plan</label><select id="f-plan" onchange="updatePlanInfo()">' +
+    '<option value="starter"' + (data.plan==='starter'?' selected':'') + '>Starter - Chat basico (100 conv/mes)</option>' +
+    '<option value="business"' + (data.plan==='business'?' selected':'') + '>Business - Chat + Agendamiento + CRM (500 conv/mes)</option>' +
+    '<option value="pro"' + (data.plan==='pro'?' selected':'') + '>Pro - Ilimitado + API + Analytics</option>' +
+    '<option value="enterprise"' + (data.plan==='enterprise'?' selected':'') + '>Enterprise - Todo + Soporte + Onboarding</option>' +
+    '</select></div>' +
+    '<div id="plan-info" style="background:#f8fafc;border-radius:8px;padding:12px;font-size:13px;margin-bottom:12px"></div>' +
     '<div class="form-group"><label>WhatsApp (numero)</label><input id="f-wa" value="' + (data.whatsapp_phone || '') + '" placeholder="+54911..."></div>' +
     '<div class="form-group"><label>Nombre del Dueno</label><input id="f-owner" value="' + (data.owner_name || '') + '" placeholder="Dr. Juan Perez"></div>' +
     '<div class="form-group"><label>Email del Dueno</label><input id="f-owner-email" value="' + (data.owner_email || '') + '" placeholder="juan@clinicasanjose.com"></div>' +
@@ -384,7 +390,26 @@ function showClientForm(data) {
       ? '<button class="btn-primary" onclick="saveClient(\'' + data.slug + '\')">Guardar</button><button class="btn-primary" style="background:#22c55e" onclick="showServicesStep(\'' + data.slug + '\')">Servicios &raquo;</button>'
       : '<button class="btn-primary" onclick="goToWizardStep2()">Siguiente &raquo;</button>') +
     '</div>';
+  setTimeout(function() { if (typeof updatePlanInfo === 'function') updatePlanInfo(); }, 50);
   $('clientModal').classList.add('open');
+}
+
+function updatePlanInfo() {
+  var features = {
+    starter: { chat: true, scheduling: false, crm: false, kb: false, conv: '100/mes', api: false },
+    business: { chat: true, scheduling: true, crm: true, kb: true, conv: '500/mes', api: false },
+    pro: { chat: true, scheduling: true, crm: true, kb: true, conv: 'Ilimitadas', api: true },
+    enterprise: { chat: true, scheduling: true, crm: true, kb: true, conv: 'Ilimitadas', api: true, support: true },
+  };
+  var plan = $('f-plan') ? $('f-plan').value : 'starter';
+  var f = features[plan];
+  var badges = '<span style="display:inline-block;background:#22c55e20;color:#16a34a;padding:2px 8px;border-radius:4px;margin:2px;font-size:11px">Chat</span>';
+  if (f.scheduling) badges += '<span style="display:inline-block;background:#2563eb20;color:#2563eb;padding:2px 8px;border-radius:4px;margin:2px;font-size:11px">Agendamiento</span>';
+  if (f.crm) badges += '<span style="display:inline-block;background:#eab30820;color:#a16207;padding:2px 8px;border-radius:4px;margin:2px;font-size:11px">CRM</span>';
+  if (f.kb) badges += '<span style="display:inline-block;background:#8b5cf620;color:#7c3aed;padding:2px 8px;border-radius:4px;margin:2px;font-size:11px">Knowledge Base</span>';
+  if (f.api) badges += '<span style="display:inline-block;background:#ef444420;color:#dc2626;padding:2px 8px;border-radius:4px;margin:2px;font-size:11px">API</span>';
+  if (f.support) badges += '<span style="display:inline-block;background:#f9731620;color:#ea580c;padding:2px 8px;border-radius:4px;margin:2px;font-size:11px">Soporte dedicado</span>';
+  $('plan-info').innerHTML = '<strong>Incluye:</strong><br>' + badges + '<br><span style="color:#64748b">Conversaciones: ' + f.conv + '</span>';
 }
 
 function goToWizardStep2() {
