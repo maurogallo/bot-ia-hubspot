@@ -4,6 +4,7 @@ const config = require('./config');
 const { createStore } = require('./adapters/outbound/postgres-store');
 const { createProvider: createAI } = require('./adapters/outbound/ollama-provider');
 const { createProvider: createCRM } = require('./adapters/outbound/hubspot-provider');
+const { createProvider: createCalendar } = require('./adapters/outbound/google-calendar-provider');
 const { createApp } = require('./adapters/inbound/express-adapter');
 const { createAdapter: createWebJSWA } = require('./adapters/inbound/whatsapp-adapter');
 const { createAdapter: createMetaWA } = require('./adapters/inbound/meta-whatsapp-adapter');
@@ -13,14 +14,7 @@ const { createResolver } = require('./middleware/tenant-resolver');
 const store = createStore();
 const ai = createAI();
 const crm = createCRM();
-
-let calendar = null;
-try {
-  const { createProvider: createCalendar } = require('./adapters/outbound/google-calendar-provider');
-  calendar = createCalendar(config.calendar);
-} catch (err) {
-  logger.warn('Calendar provider not available (googleapis missing)', { error: err.message });
-}
+const calendar = createCalendar(config.calendar);
 const tenantResolver = createResolver(store);
 
 const KNOWLEDGE_SEED = [

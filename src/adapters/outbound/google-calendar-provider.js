@@ -1,5 +1,5 @@
 const { google } = require('googleapis');
-const logger = require('../logger');
+const logger = require('../../logger');
 
 function createProvider(config) {
   let calendar = null;
