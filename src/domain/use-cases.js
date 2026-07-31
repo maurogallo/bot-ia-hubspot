@@ -14,7 +14,7 @@ function extractMemoryFacts(leadData, message) {
 const HANDOFF_KEYWORDS = [
   'hablar con un humano', 'hablar con humano', 'asesor personal', 'persona real',
   'hablar con un asesor', 'atención personal', 'que me llame', 'contáctame',
-  'quiero hablar con alguien', 'agendar una reunión', 'agendar una cita',
+  'quiero hablar con alguien',
   'hablar con un agente', 'transferir con humano', 'con un asesor',
   'hablar con una persona', 'necesito hablar con alguien',
 ];
