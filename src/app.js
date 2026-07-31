@@ -2,7 +2,8 @@ require('express-async-errors');
 const logger = require('./logger');
 const config = require('./config');
 const { createStore } = require('./adapters/outbound/postgres-store');
-const { createProvider: createAI } = require('./adapters/outbound/ollama-provider');
+const { createProvider: createOllama } = require('./adapters/outbound/ollama-provider');
+const { createProvider: createGemini } = require('./adapters/outbound/gemini-provider');
 const { createProvider: createCRM } = require('./adapters/outbound/hubspot-provider');
 const { createProvider: createCalendar } = require('./adapters/outbound/google-calendar-provider');
 const { createApp } = require('./adapters/inbound/express-adapter');
@@ -12,7 +13,13 @@ const { handleMessage } = require('./domain/use-cases');
 const { createResolver } = require('./middleware/tenant-resolver');
 
 const store = createStore();
-const ai = createAI();
+const ollama = createOllama();
+const gemini = createGemini();
+const ai = {
+  generateResponse: gemini.generateResponse,
+  generateEmbedding: ollama.generateEmbedding,
+  checkHealth: () => ollama.checkHealth(),
+};
 const crm = createCRM();
 const calendar = createCalendar(config.calendar);
 const tenantResolver = createResolver(store);
