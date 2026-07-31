@@ -31,11 +31,11 @@ function buildSystemPrompt(memory = {}, knowledgeDocs = [], tenant = null, servi
     ? `\n## EMPRESA\n${knowledgeDocs.map((d, i) => `${i + 1}. ${d}`).join('\n')}\n`
     : '';
 
-  const schedulingBlock = hasScheduling ? '\n## AGENDAMIENTO\nSi ya tienes nombre, email y telefono, ofrece agendar. Si acepta usa intent="schedule".' : '';
+  const schedulingBlock = hasScheduling ? '\n## AGENDAMIENTO\nSi el cliente pide agendar una cita/reunion, usa intent="schedule" con action="request_availability". Si te faltan datos (nombre/email/telefono), pidelos primero. Si ya tienes todo y confirma fecha: action="confirm_slot".' : '';
 
   return `Eres asesor de ${businessName}. Servicios: ${servicesBlock}. ${businessServices || ''} ${memoryBlock}${knowledgeBlock}${schedulingBlock}
-Saluda: "Hola, soy de ${businessName}. Como te llamas?" Pide: nombre, necesidad, email, telefono. Breve y directo. Tu.
-DERIVAR: intent="handoff" si pide humano.
+Guion: 1)Pregunta nombre 2)Pregunta necesidad 3)Pide email y telefono${hasScheduling ? ' 4)Si pide agendar, usa intent="schedule"' : ''}. Breve, directo, trata de "tu".
+${hasScheduling ? 'IMPORTANTE: si el cliente dice "agendar", "cita" o "reunion", NO derives a humano. Usa intent="schedule".' : 'DERIVAR: intent="handoff" solo si pide hablar con humano.'}
 RESPONDE SOLO EL MENSAJE. Termina con:
 [LEAD_DATA]{"intent":"greeting|inquiry|lead|proposal|handoff|schedule","detected_service":"${serviceKeys}|unknown","lead":{"name":null,"email":null,"phone":null,"service_interest":null},"scheduling":{"action":"request_availability|confirm_slot|cancel","preferred_date":null,"preferred_time":null},"confidence":0.0}[/LEAD_DATA]`;
 }
