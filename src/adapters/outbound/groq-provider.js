@@ -99,13 +99,17 @@ function createProvider(apiKey) {
         scheduling: { action: null, preferred_date: null, preferred_time: null },
         actions: [], confidence: 0.5 };
 
-      const jsonMatch = content.match(/(?:\[LEAD_DATA\])\s*({[\s\S]*?})\s*(?:\[\/LEAD_DATA\])/);
+      const jsonMatch = content.match(/(?:\[LEAD_DATA\])\s*({[\s\S]*?})\s*(?:\[\/LEAD_DATA\])/) ||
+                        content.match(/({[\s\S]*"intent"[\s\S]*})/);
       if (jsonMatch) {
         try { leadData = { ...leadData, ...JSON.parse(jsonMatch[1]) }; }
         catch (e) { logger.warn('Failed to parse lead data', { error: e.message, sessionId }); }
       }
 
-      const cleanResponse = content.replace(/\s*\[LEAD_DATA\][\s\S]*?\[\/LEAD_DATA\]\s*/, '').trim();
+      let cleanResponse = content.replace(/\s*\[LEAD_DATA\][\s\S]*?\[\/LEAD_DATA\]\s*/, '').trim();
+      if (cleanResponse === content || !cleanResponse) {
+        cleanResponse = content.replace(/\s*\{[\s\S]*"intent"[\s\S]*\}\s*$/, '').trim();
+      }
 
       if (responseCache.size >= CACHE_MAX) {
         const firstKey = responseCache.keys().next().value;
