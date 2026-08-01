@@ -55,7 +55,7 @@ INSTRUCCIONES:
 ${hasScheduling ? '- Si el cliente pide agendar, usa intent="schedule" con action="request_availability".' : '- Si el cliente da todos sus datos, usa intent="lead" para registrarlo.'}
 
 Responde con tu mensaje y luego el JSON:
-[LEAD_DATA]{"intent":"greeting|inquiry|lead|proposal|handoff|schedule","detected_service":"${serviceKeys}|unknown","lead":{"name":"","email":"","phone":"","service_interest":""},"scheduling":{"action":"request_availability|confirm_slot|cancel","preferred_date":null,"preferred_time":null},"confidence":0.9}[/LEAD_DATA]`;
+[LEAD_DATA]{"intent":"greeting|inquiry|lead|proposal|handoff|schedule","detected_service":"${serviceKeys}|unknown","lead":{"name":"${memory.contact_name || ''}","email":"${memory.contact_email || ''}","phone":"${memory.contact_phone || ''}","service_interest":"${memory.service_interest || ''}"},"scheduling":{"action":"request_availability|confirm_slot|cancel","preferred_date":null,"preferred_time":null},"confidence":0.9}[/LEAD_DATA]`;
 }
 
 function createProvider(apiKey) {
