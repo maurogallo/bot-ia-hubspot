@@ -51,18 +51,18 @@ SERVICIOS QUE VENDES:
 ${servicesBlock}
 
 REGLAS OBLIGATORIAS - DEBES SEGUIRLAS SIN EXCEPCION:
-${!memory.contact_name ? '- NO tienes el nombre. En tu proximo mensaje DEBES preguntar: "¿Cual es tu nombre?". No preguntes servicios antes del nombre.' : ''}
-${memory.contact_name && !memory.contact_email ? '- Ya tienes el nombre (' + (memory.contact_name || '') + '). Ahora DEBES pedir el email. No hables de servicios.' : ''}
-${memory.contact_email && !memory.contact_phone ? '- Ya tienes email. Ahora DEBES pedir el telefono.' : ''}
-${memory.contact_email && memory.contact_phone ? `- Ya tienes todos los datos: ${memory.contact_name}, ${memory.contact_email}, ${memory.contact_phone}. ${hasScheduling ? 'Ahora DEBES ofrecer agendar una reunion. Di: "Tengo todos tus datos. Te gustaria agendar una cita?" Si acepta usa intent="schedule" con action="request_availability".' : 'Ahora confirma que un asesor lo contactara y usa intent="lead".'}` : ''}
-- SIEMPRE responde con UNA pregunta clara. NUNCA des explicaciones largas.
-- Si mencionan un servicio, di su precio en UNA frase y pregunta el siguiente dato pendiente.
-- Maximo 2 oraciones por respuesta.
-${hasScheduling ? '- Si el cliente quiere agendar: usa intent="schedule" con action="request_availability". NO derives a humano.' : ''}
+${!memory.contact_name ? '- NO tienes el nombre del cliente. Si pregunta por servicios, menciona 1 o 2 en UNA frase y luego PREGUNTA el nombre. Ej: "Microsoft Fabric desde $2999 y Databricks desde $3499. ¿Cual es tu nombre?".' : ''}
+${memory.contact_name && !memory.contact_email ? '- Ya tienes el nombre: ' + (memory.contact_name || '') + '. Ahora pide su EMAIL. No hables de servicios ni des explicaciones largas.' : ''}
+${memory.contact_email && !memory.contact_phone ? '- Ya tienes el email. Ahora pide su TELEFONO.' : ''}
+${memory.contact_email && memory.contact_phone ? '- Ya tienes todos los datos. ' + (hasScheduling ? 'OFRECE agendar una cita. Di: "Ya tengo todos tus datos. ¿Te gustaria agendar una reunion?" Si acepta usa intent="schedule".' : 'Confirma que un asesor lo contactara y usa intent="lead".') : ''}
+- SIEMPRE termina con UNA pregunta clara. NUNCA respondas sin preguntar algo.
+- Maximo 2 oraciones.${schedulingRules}
 
 FORMATO:
+1. Escribe tu mensaje al cliente (UNA pregunta clara).
+2. Luego escribe el JSON con los datos que tienes:
 [LEAD_DATA]{"intent":"greeting|inquiry|lead|proposal|handoff|schedule","detected_service":"${serviceKeys}|unknown","lead":{"name":"${memory.contact_name || ''}","email":"${memory.contact_email || ''}","phone":"${memory.contact_phone || ''}","service_interest":""},"scheduling":{"action":"request_availability|confirm_slot|cancel","preferred_date":null,"preferred_time":null},"confidence":0.9}[/LEAD_DATA]
-Responde SOLO el mensaje, luego el JSON.`;
+IMPORTANTE: Siempre escribe el mensaje PRIMERO, luego el JSON. Si no tienes datos, deja los campos como cadena vacia "".`;
 }
 
 function createProvider(apiKey) {
@@ -93,7 +93,7 @@ function createProvider(apiKey) {
         model: 'llama-3.1-8b-instant',
         messages,
         temperature: 0.7,
-        max_tokens: 512,
+        max_tokens: 1024,
       }, {
         headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
         timeout: 15000,
