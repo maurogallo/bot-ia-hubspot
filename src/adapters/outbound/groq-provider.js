@@ -108,7 +108,10 @@ function createProvider(apiKey) {
 
       let cleanResponse = content.replace(/\s*\[LEAD_DATA\][\s\S]*?\[\/LEAD_DATA\]\s*/, '').trim();
       if (cleanResponse === content || !cleanResponse) {
-        cleanResponse = content.replace(/\s*\{[\s\S]*"intent"[\s\S]*\}\s*$/, '').trim();
+        cleanResponse = content.replace(/\s*\{[\s\S]*?"intent"[\s\S]*?\}\s*$/, '').trim();
+      }
+      if (!cleanResponse || cleanResponse.length < 2) {
+        cleanResponse = content.split('{')[0].trim();
       }
 
       if (responseCache.size >= CACHE_MAX) {
