@@ -3,7 +3,7 @@ const logger = require('./logger');
 const config = require('./config');
 const { createStore } = require('./adapters/outbound/postgres-store');
 const { createProvider: createOllama } = require('./adapters/outbound/ollama-provider');
-const { createProvider: createGemini } = require('./adapters/outbound/gemini-provider');
+const { createProvider: createGroq } = require('./adapters/outbound/groq-provider');
 const { createProvider: createCRM } = require('./adapters/outbound/hubspot-provider');
 const { createProvider: createCalendar } = require('./adapters/outbound/google-calendar-provider');
 const { createApp } = require('./adapters/inbound/express-adapter');
@@ -14,12 +14,12 @@ const { createResolver } = require('./middleware/tenant-resolver');
 
 const store = createStore();
 const ollama = createOllama();
-const gemini = createGemini();
+const groq = createGroq();
 const ai = {
   generateResponse: async (...args) => {
-    const result = await gemini.generateResponse(...args);
+    const result = await groq.generateResponse(...args);
     if (result.leadData?.intent === 'error') {
-      logger.info('Gemini failed, falling back to Ollama');
+      logger.info('Groq failed, falling back to Ollama');
       return await ollama.generateResponse(...args);
     }
     return result;
