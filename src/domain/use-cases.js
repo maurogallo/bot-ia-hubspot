@@ -70,9 +70,17 @@ async function handleMessage({ message, from, channel, store, ai, crm, calendar,
   const missingData = [];
   if (!memory.contact_name) missingData.push('nombre');
   if (!memory.contact_email) missingData.push('email');
-  if (!memory.contact_phone) missingData.push('teléfono');
+  if (!memory.contact_phone) missingData.push('telefono');
   if (missingData.length > 0) {
-    knowledgeDocs.push(`INSTRUCCIÓN: Aún no tienes el ${missingData.join(', ')} del cliente. Debes preguntarlo en tu siguiente mensaje.`);
+    const next = missingData[0];
+    const msgs = {
+      nombre: 'PREGUNTA EL NOMBRE del cliente. Ej: "¿Cuál es tu nombre?"',
+      email: 'PREGUNTA EL EMAIL del cliente. Ej: "¿Cuál es tu correo electrónico?"',
+      telefono: 'PREGUNTA EL TELEFONO del cliente. Ej: "¿Cuál es tu número de teléfono?"',
+    };
+    knowledgeDocs.unshift(`INSTRUCCION PRIORITARIA: ${msgs[next]} No preguntes ni nombre ni email ni telefono si ya los tienes. Solo pregunta el siguiente dato que falta: ${next}.`);
+  } else {
+    knowledgeDocs.unshift('INSTRUCCION: Ya tienes nombre, email y telefono del cliente. Ahora ofrece agendar una reunion o confirma el registro del lead.');
   }
 
   let services = [];
