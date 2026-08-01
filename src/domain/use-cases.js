@@ -11,6 +11,28 @@ function extractMemoryFacts(leadData, message) {
   return facts;
 }
 
+function extractFromMessage(message, memory) {
+  const facts = {};
+  const clean = message.trim();
+
+  const emailMatch = clean.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+  if (emailMatch && !memory.contact_email) {
+    facts.contact_email = emailMatch[1];
+  }
+
+  const phoneMatch = clean.match(/(\+?\d{8,15})/);
+  if (phoneMatch && !memory.contact_phone && !emailMatch) {
+    facts.contact_phone = phoneMatch[1];
+  }
+
+  if (!memory.contact_name && !emailMatch && !phoneMatch && clean.length >= 2 && clean.length <= 40 &&
+      !clean.match(/^(hola|buenas|buenos|si|no|ok|gracias|bien|que|como|cuál|cuando|donde|porque|para|puedes|quiero|necesito|me|indica|dame|explícame|ayuda|info|detalle)/i)) {
+    facts.contact_name = clean.charAt(0).toUpperCase() + clean.slice(1);
+  }
+
+  return facts;
+}
+
 const HANDOFF_KEYWORDS = [
   'hablar con un humano', 'hablar con humano', 'asesor personal', 'persona real',
   'hablar con un asesor', 'atención personal', 'que me llame', 'contáctame',
@@ -94,7 +116,9 @@ async function handleMessage({ message, from, channel, store, ai, crm, calendar,
 
   if (typeof store.upsertMemory === 'function') {
     const facts = extractMemoryFacts(leadData, message);
-    for (const [key, value] of Object.entries(facts)) {
+    const directFacts = extractFromMessage(message, memory);
+    const allFacts = { ...facts, ...directFacts };
+    for (const [key, value] of Object.entries(allFacts)) {
       if (value) await store.upsertMemory(session.id, key, value);
     }
   }
