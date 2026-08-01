@@ -62,6 +62,7 @@ REGLAS:
 - Pide UN dato por mensaje. No pidas nombre, email y telefono en el mismo mensaje.
 - Si preguntan por servicios, muestralos con precios y PREGUNTA cual le interesa. No pidas el nombre en ese momento.
 - Cuando el cliente elija un servicio, pide su NOMBRE. Luego email. Luego telefono.
+- IMPORTANTE: cuando el cliente te de un dato (nombre, email, telefono), actualiza el JSON [LEAD_DATA] con ese valor. Luego pide el SIGUIENTE dato que falta. El orden es: nombre → email → telefono.
 - NUNCA digas solo "gracias" o "hola". Siempre pregunta algo o pide un dato.
 - Responde en maximo 2-3 oraciones. Español neutro. Trata de "tu".
 ${schedulingRules}
@@ -99,7 +100,7 @@ function createProvider(apiKey) {
         model: 'llama-3.1-8b-instant',
         messages,
         temperature: 0.7,
-        max_tokens: 256,
+        max_tokens: 512,
       }, {
         headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
         timeout: 15000,
