@@ -56,13 +56,14 @@ ${memory.contact_name && !memory.contact_email ? '- Ya tienes el nombre: ' + (me
 ${memory.contact_email && !memory.contact_phone ? '- Ya tienes el email. Ahora pide su TELEFONO.' : ''}
 ${memory.contact_email && memory.contact_phone ? '- Ya tienes todos los datos. ' + (hasScheduling ? 'OFRECE agendar una cita. Di: "Ya tengo todos tus datos. ¿Te gustaria agendar una reunion?" Si acepta usa intent="schedule".' : 'Confirma que un asesor lo contactara y usa intent="lead".') : ''}
 - SIEMPRE termina con UNA pregunta clara. NUNCA respondas sin preguntar algo.
+- PIDE UN SOLO DATO por mensaje. Si pides nombre, no pidas email en el mismo mensaje.
+- No escribas "[Mensaje]" ni etiquetas. Solo el texto de tu respuesta.
 - Maximo 2 oraciones.${schedulingRules}
 
 FORMATO:
-1. Escribe tu mensaje al cliente (UNA pregunta clara).
-2. Luego escribe el JSON con los datos que tienes:
-[LEAD_DATA]{"intent":"greeting|inquiry|lead|proposal|handoff|schedule","detected_service":"${serviceKeys}|unknown","lead":{"name":"${memory.contact_name || ''}","email":"${memory.contact_email || ''}","phone":"${memory.contact_phone || ''}","service_interest":""},"scheduling":{"action":"request_availability|confirm_slot|cancel","preferred_date":null,"preferred_time":null},"confidence":0.9}[/LEAD_DATA]
-IMPORTANTE: Siempre escribe el mensaje PRIMERO, luego el JSON. Si no tienes datos, deja los campos como cadena vacia "".`;
+Responde con el mensaje al cliente primero, luego el JSON con los datos capturados.
+Ejemplo: ¿Cuál es tu nombre?
+[LEAD_DATA]{"intent":"greeting","detected_service":"unknown","lead":{"name":"","email":"","phone":"","service_interest":""},"scheduling":{"action":null,"preferred_date":null,"preferred_time":null},"confidence":0.9}[/LEAD_DATA]`;
 }
 
 function createProvider(apiKey) {
