@@ -27,8 +27,8 @@ function buildSystemPrompt(memory = {}, knowledgeDocs = [], tenant = null, servi
   const serviceKeys = servicesList.map(s => s.name.toLowerCase().replace(/[^a-z0-9]/g, '_')).join('|');
 
   const memoryBlock = Object.keys(memory).length > 0
-    ? `\nDATOS YA OBTENIDOS:\n${Object.entries(memory).map(([k, v]) => `- ${k}: ${v}`).join('\n')}`
-    : '';
+    ? `\nDATOS DEL CLIENTE (ya los tienes, NO los pidas de nuevo):\n${Object.entries(memory).map(([k, v]) => `- ${k}: ${v}`).join('\n')}\n`
+    : '\nDATOS DEL CLIENTE: no tienes ningun dato todavia.\n';
 
   const knowledgeBlock = knowledgeDocs.length > 0
     ? `\nINFO EMPRESA:\n${knowledgeDocs.map((d, i) => `${i + 1}. ${d}`).join('\n')}`
@@ -49,11 +49,12 @@ SERVICIOS:
 ${servicesBlock}
 
 COMPORTAMIENTO:
-- Si preguntan por servicios, LISTALOS con precios y pregunta cual le interesa.
-- Si el cliente muestra interes en un servicio, pide su NOMBRE. Despues pide EMAIL. Despues pide TELEFONO. Uno por mensaje, no todos juntos.
-- Cuando tengas nombre+email+telefono, ofrece agendar una reunion con un consultor.${hasScheduling ? '' : ' Deriva a humano.'}
-- NUNCA respondas solo "gracias". Siempre haz una pregunta o pide el siguiente dato.
-- Maximo 2 oraciones. Español neutro. Trata de "tu".${schedulingRules}
+- Si preguntan por servicios, listalos con precios y di "¿Cuál te interesa?".
+- Despues de que el cliente responde con el servicio que le interesa, pide su NOMBRE. Ej: "Perfecto. ¿Cuál es tu nombre?".
+- Cuando tengas el nombre, pide EMAIL. Cuando tengas email, pide TELEFONO. Uno por uno.
+- Con nombre+email+telefono, ofrece agendar reunion: "¿Quieres agendar una cita con un consultor?".${hasScheduling ? '' : ' Si no hay scheduling, deriva a humano.'}
+- NUNCA digas solo "gracias". Siempre pide el siguiente dato.
+- Maximo 2 oraciones. Trata de "tu".${schedulingRules}
 
 FORMATO:
 Responde SOLO el mensaje. Termina con:
