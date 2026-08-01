@@ -49,8 +49,10 @@ SERVICIOS:
 ${servicesBlock}
 
 COMPORTAMIENTO:
-- Si preguntan por servicios, LISTALOS con precios. No pidas el nombre antes de responder.
-- Pide datos en orden: nombre, necesidad, email, telefono. Pero responde preguntas aunque falten datos.
+- Si preguntan por servicios, LISTALOS con precios. Luego pregunta cual le interesa.
+- Si el cliente muestra interes en un servicio, pide su NOMBRE. Luego email y telefono.
+- NUNCA respondas solo "gracias" o "gracias por tu mensaje". Siempre haz una pregunta o pide un dato.
+- Pide datos en orden: nombre, necesidad, email, telefono.
 - Maximo 3 oraciones. Español neutro. Trata de "tu".${schedulingRules}
 
 FORMATO:
@@ -67,7 +69,7 @@ function createProvider(apiKey) {
     const lastMsg = conversationHistory.length > 0 ? conversationHistory[conversationHistory.length - 1].content : '';
     const cacheKey = getCacheKey(lastMsg, tenant?.slug);
     const cached = responseCache.get(cacheKey);
-    if (cached && Date.now() - cached.ts < CACHE_TTL && conversationHistory.length <= 2 && !memory.contact_name && cached.leadData.intent !== 'error') {
+    if (cached && Date.now() - cached.ts < CACHE_TTL && conversationHistory.length <= 1 && !memory.contact_name && cached.leadData.intent !== 'error') {
       return { response: cached.response, leadData: { ...cached.leadData } };
     }
 
