@@ -16,7 +16,14 @@ const store = createStore();
 const ollama = createOllama();
 const gemini = createGemini();
 const ai = {
-  generateResponse: gemini.generateResponse,
+  generateResponse: async (...args) => {
+    const result = await gemini.generateResponse(...args);
+    if (result.leadData?.intent === 'error') {
+      logger.info('Gemini failed, falling back to Ollama');
+      return await ollama.generateResponse(...args);
+    }
+    return result;
+  },
   generateEmbedding: ollama.generateEmbedding,
   checkHealth: () => ollama.checkHealth(),
 };
