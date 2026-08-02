@@ -191,6 +191,14 @@ h1{font-size:22px;color:#1e293b;margin-bottom:8px}p{color:#64748b;margin-bottom:
     if (deps.metaHandleIncoming) deps.metaHandleIncoming(req.body).catch(() => {});
   });
 
+  app.post('/api/telegram-webhook', (req, res) => {
+    res.status(200).send('OK');
+    const msg = req.body?.message;
+    if (msg && deps.telegramHandleIncoming) {
+      deps.telegramHandleIncoming(msg).catch(() => {});
+    }
+  });
+
   const { username, password } = config.dashboard;
   if (username && password) {
     const loginPage = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Login — ${config.business.name}</title><style>*{box-sizing:border-box}body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0f172a;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#e2e8f0}.card{background:#1e293b;padding:40px;border-radius:16px;width:360px;max-width:90%;box-shadow:0 25px 50px #00000040}h1{font-size:22px;margin:0 0 8px;color:#f1f5f9}p{font-size:14px;color:#94a3b8;margin:0 0 24px}label{display:block;font-size:13px;color:#94a3b8;margin-bottom:4px}input{width:100%;padding:10px 14px;border:1px solid #334155;border-radius:8px;background:#0f172a;color:#e2e8f0;font-size:14px;margin-bottom:16px;outline:none;transition:border-color .2s}input:focus{border-color:#3b82f6}button{width:100%;padding:10px;background:#3b82f6;color:#fff;border:none;border-radius:8px;font-size:15px;cursor:pointer;font-weight:600;transition:background .2s}button:hover{background:#2563eb}.error{color:#ef4444;font-size:13px;margin-top:12px;text-align:center}</style></head><body><div class="card"><h1>${config.business.name}</h1><p>Ingresá al dashboard</p><form method="post" action="/login"><label for="user">Usuario</label><input type="text" id="user" name="username" required autofocus><label for="pass">Contraseña</label><input type="password" id="pass" name="password" required><button type="submit">Ingresar</button></form></div></body></html>`;

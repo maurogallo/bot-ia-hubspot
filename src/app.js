@@ -9,6 +9,7 @@ const { createProvider: createCalendar } = require('./adapters/outbound/google-c
 const { createApp } = require('./adapters/inbound/express-adapter');
 const { createAdapter: createWebJSWA } = require('./adapters/inbound/whatsapp-adapter');
 const { createAdapter: createMetaWA } = require('./adapters/inbound/meta-whatsapp-adapter');
+const { createAdapter: createTelegram } = require('./adapters/inbound/telegram-adapter');
 const { handleMessage } = require('./domain/use-cases');
 const { createResolver } = require('./middleware/tenant-resolver');
 
@@ -112,8 +113,10 @@ const deps = { store, ai, crm, calendar, handleMessage, tenantResolver };
 
 const createWhatsApp = config.whatsapp.driver === 'meta' ? createMetaWA : createWebJSWA;
 const whatsapp = createWhatsApp(deps);
+const telegram = createTelegram(deps);
 deps.getQrCode = whatsapp.getQrCode;
 deps.metaHandleIncoming = whatsapp.handleIncoming;
+deps.telegramHandleIncoming = telegram.handleIncoming;
 
 const app = createApp(deps);
 
