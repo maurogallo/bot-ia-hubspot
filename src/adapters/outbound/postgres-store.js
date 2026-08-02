@@ -77,6 +77,18 @@ function createStore() {
         );
         CREATE INDEX IF NOT EXISTS idx_tenant_services_tenant ON tenant_services(tenant_id);
 
+        CREATE TABLE IF NOT EXISTS industry_templates (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          name TEXT NOT NULL UNIQUE,
+          icon TEXT DEFAULT '💼',
+          description TEXT,
+          default_services JSONB DEFAULT '[]',
+          default_knowledge JSONB DEFAULT '[]',
+          qualification_questions JSONB DEFAULT '[]',
+          is_active BOOLEAN DEFAULT true,
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+
         ALTER TABLE IF EXISTS sessions ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id);
         ALTER TABLE IF EXISTS contacts ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id);
 
@@ -451,6 +463,22 @@ function createStore() {
     await query('DELETE FROM tenant_services WHERE id = $1', [id]);
   }
 
+  async function getIndustryTemplates() {
+    const result = await query('SELECT * FROM industry_templates WHERE is_active = true ORDER BY name');
+    return result.rows;
+  }
+
+  async function seedIndustryTemplates(templates) {
+    const count = await query('SELECT COUNT(*) FROM industry_templates');
+    if (parseInt(count.rows[0].count, 10) > 0) return;
+    for (const t of templates) {
+      await query(
+        'INSERT INTO industry_templates (name, icon, description, default_services, default_knowledge, qualification_questions) VALUES ($1, $2, $3, $4::jsonb, $5::jsonb, $6::jsonb)',
+        [t.name, t.icon, t.description, JSON.stringify(t.services), JSON.stringify(t.knowledge), JSON.stringify(t.questions)]
+      );
+    }
+  }
+
   async function getTenantStats(tenantId) {
     const result = await query(
       `SELECT
@@ -599,7 +627,7 @@ function createStore() {
     getKnowledgeCount, addKnowledge, searchKnowledge, getAllKnowledge, deleteKnowledge,
     getKnowledgeByTenant, addKnowledgeForTenant, searchKnowledgeForTenant,
     getTenantBySlug, getTenantByPhone, getTenantByPhoneNumberId, getDefaultTenant,
-    getAllTenants, createTenant, updateTenant, deactivateTenant, getTenantServices, saveTenantService, deleteTenantService, getTenantStats,
+    getAllTenants, createTenant, updateTenant, deactivateTenant, getTenantServices, saveTenantService, deleteTenantService, getIndustryTemplates, seedIndustryTemplates, getTenantStats,
     saveAppointment, getAppointmentsByEmail, getAppointmentsByTenant,
     getUpcomingAppointments, updateAppointmentStatus, cancelAppointment, getAppointmentById,
     getMonthlyUsage, logUsage, getUsageStats,

@@ -380,6 +380,7 @@ function showClientForm(data) {
   var steps = !data.slug ? '<div style="display:flex;gap:4px;margin-bottom:12px"><span style="background:#2563eb;color:#fff;padding:4px 12px;border-radius:6px;font-size:12px;font-weight:600">Paso 1</span><span style="background:#f1f5f9;color:#64748b;padding:4px 12px;border-radius:6px;font-size:12px">Paso 2</span><span style="background:#f1f5f9;color:#64748b;padding:4px 12px;border-radius:6px;font-size:12px">Paso 3</span></div>' : '';
 
   $('clientModalBody').innerHTML = steps +
+    (!data.slug ? '<div class="form-group"><label>Usar template de industria</label><select id="f-template" onchange="loadTemplate()"><option value="">Personalizado</option></select><p style="font-size:11px;color:#64748b;margin-top:2px">Pre-carga servicios, conocimiento y preguntas para la industria</p></div>' : '') +
     '<div class="form-group"><label>Slug (identificador unico)</label><input id="f-slug" value="' + (data.slug || '') + '" placeholder="clinica-san-jose" ' + (data.slug ? 'readonly' : '') + '></div>' +
     '<div class="form-group"><label>Nombre del Negocio</label><input id="f-name" value="' + (data.business_name || '') + '" placeholder="Clinica San Jose"></div>' +
     '<div class="form-group"><label>Descripcion de servicios</label><input id="f-services" value="' + (data.business_services || '') + '" placeholder="Consultas medicas, tratamientos, emergencias"></div>' +
@@ -398,7 +399,7 @@ function showClientForm(data) {
       ? '<button class="btn-primary" onclick="saveClient(\'' + data.slug + '\')">Guardar</button><button class="btn-primary" style="background:#22c55e" onclick="showServicesStep(\'' + data.slug + '\')">Servicios &raquo;</button>'
       : '<button class="btn-primary" onclick="goToWizardStep2()">Siguiente &raquo;</button>') +
     '</div>';
-  setTimeout(function() { if (typeof updatePlanInfo === 'function') updatePlanInfo(); }, 50);
+  setTimeout(function() { if (typeof updatePlanInfo === 'function') updatePlanInfo(); if (typeof loadTemplatesDropdown === 'function') loadTemplatesDropdown(); }, 50);
   $('clientModal').classList.add('open');
 }
 
@@ -500,6 +501,7 @@ async function finishWizard() {
     slug: data.slug,
     businessName: data.businessName,
     businessServices: data.businessServices,
+    template: window._templateData ? window._templateData.name : null,
     plan: plan,
     whatsappPhone: data.whatsappPhone,
     ownerName: data.ownerName,
@@ -598,6 +600,30 @@ async function deleteClient(slug) {
     await fetch('/api/tenants/' + slug, { method:'DELETE' });
     loadClients();
   } catch(e) { alert('Error al desactivar cliente'); }
+}
+
+async function loadTemplatesDropdown() {
+  try {
+    var templates = await fetchJSON('/api/templates');
+    var sel = document.getElementById('f-template');
+    if (!sel) return;
+    sel.innerHTML = '<option value=\"\">Personalizado</option>' + templates.map(function(t) {
+      return '<option value=\"' + t.name + '\">' + t.icon + ' ' + t.name + ' - ' + t.description + '</option>';
+    }).join('');
+  } catch(e) { /* ignore */ }
+}
+
+async function loadTemplate() {
+  var name = document.getElementById('f-template').value;
+  if (!name) return;
+  try {
+    var templates = await fetchJSON('/api/templates');
+    var t = templates.find(function(tp) { return tp.name === name; });
+    if (!t) return;
+    document.getElementById('f-name').value = t.name + ' - ' + t.description;
+    document.getElementById('f-services').value = t.description;
+    window._templateData = t;
+  } catch(e) { /* ignore */ }
 }
 
 document.addEventListener('DOMContentLoaded', function() {

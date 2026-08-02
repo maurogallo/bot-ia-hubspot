@@ -359,9 +359,18 @@ h1{font-size:22px;color:#1e293b;margin-bottom:8px}p{color:#64748b;margin-bottom:
 
   app.post('/api/tenants', requireDashboardAuth, async (req, res) => {
     try {
-      const { slug, businessName, plan } = req.body;
+      const { slug, businessName, plan, template } = req.body;
       if (!slug || !businessName) return res.status(400).json({ error: 'slug y businessName son obligatorios' });
       const tenant = await deps.store.createTenant(req.body);
+      if (template && deps.store.getIndustryTemplates) {
+        const templates = await deps.store.getIndustryTemplates();
+        const tpl = templates.find(t => t.name === template);
+        if (tpl && tpl.default_services) {
+          for (const svc of tpl.default_services) {
+            await deps.store.saveTenantService({ tenantId: tenant.id, ...svc });
+          }
+        }
+      }
       res.status(201).json(tenant);
     } catch (error) {
       logger.error('Tenant create error', { error: error.message });
@@ -436,6 +445,18 @@ h1{font-size:22px;color:#1e293b;margin-bottom:8px}p{color:#64748b;margin-bottom:
     } catch (error) {
       logger.error('Tenant service delete error', { error: error.message });
       res.status(500).json({ error: 'Error al eliminar servicio' });
+    }
+  });
+
+  // ---- Industry Templates ----
+
+  app.get('/api/templates', async (req, res) => {
+    try {
+      const templates = await deps.store.getIndustryTemplates();
+      res.json(templates);
+    } catch (error) {
+      logger.error('Templates list error', { error: error.message });
+      res.status(500).json({ error: 'Error al obtener templates' });
     }
   });
 
