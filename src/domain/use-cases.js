@@ -95,14 +95,13 @@ async function handleMessage({ message, from, channel, store, ai, crm, calendar,
   if (!memory.contact_phone) missingData.push('telefono');
   if (missingData.length > 0) {
     const next = missingData[0];
-    const msgs = {
-      nombre: 'El cliente te dio su nombre? Guardalo en lead.name del JSON. Si no lo tienes, preguntalo: "¿Cuál es tu nombre?"',
-      email: 'Ahora pide el EMAIL: "¿Cuál es tu correo electrónico?". Guarda la respuesta en lead.email.',
-      telefono: 'Ahora pide el TELEFONO: "¿Cuál es tu número de teléfono?". Guarda la respuesta en lead.phone.',
-    };
-    knowledgeDocs.unshift(`INSTRUCCION PRIORITARIA: ${msgs[next]}`);
+    knowledgeDocs = [{
+      content: `INSTRUCCION OBLIGATORIA: Tu UNICA tarea ahora es conseguir el ${next} del cliente. No ofrezcas agendar, no hables de servicios, no des explicaciones. Solo pregunta el ${next}. Si el cliente ya te lo dio en este mensaje, dalo por recibido y pide el siguiente dato. Datos que te faltan: ${missingData.join(', ')}.`
+    }, ...knowledgeDocs];
   } else {
-    knowledgeDocs.unshift('INSTRUCCION: Ya tienes nombre, email y telefono del cliente. Ahora ofrece agendar una reunion o confirma el registro del lead.');
+    knowledgeDocs = [{
+      content: `INSTRUCCION: Ya tienes todos los datos. Ahora ofrece agendar una reunion. Si el cliente acepta, responde que verificaras disponibilidad.`
+    }, ...knowledgeDocs];
   }
 
   let services = [];
