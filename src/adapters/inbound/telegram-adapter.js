@@ -4,8 +4,6 @@ const config = require('../../config');
 
 const TELEGRAM_API = 'https://api.telegram.org';
 
-const processedIds = null;
-
 function createAdapter(deps) {
   const token = process.env.TELEGRAM_BOT_TOKEN || '';
   const baseUrl = `${TELEGRAM_API}/bot${token}`;
@@ -29,11 +27,10 @@ function createAdapter(deps) {
 
   async function handleMessage(message) {
     try {
-      logger.info('Telegram handler entered', { text: message?.text, chatId: message?.chat?.id });
       const msgId = message.message_id;
       const text = message.text;
       const chatId = message.chat?.id;
-      if (!text || !chatId) { logger.warn('Telegram missing text/chatId'); return; }
+      if (!text || !chatId) return;
 
       logger.info('Telegram message', { chatId, text: text.substring(0, 100) });
 
