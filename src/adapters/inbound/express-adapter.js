@@ -194,6 +194,7 @@ h1{font-size:22px;color:#1e293b;margin-bottom:8px}p{color:#64748b;margin-bottom:
   app.post('/api/telegram-webhook', (req, res) => {
     res.status(200).send('OK');
     const msg = req.body?.message || req.body?.edited_message || req.body?.channel_post;
+    logger.info('Telegram webhook received', { hasMessage: !!msg, hasText: !!msg?.text, chatId: msg?.chat?.id });
     if (msg && deps.telegramHandleIncoming) {
       deps.telegramHandleIncoming(msg).catch((e) => logger.error('Telegram webhook error', { error: e.message }));
     }
