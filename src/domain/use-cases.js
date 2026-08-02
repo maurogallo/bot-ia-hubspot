@@ -106,14 +106,7 @@ async function handleMessage({ message, from, channel, store, ai, crm, calendar,
 
   let services = [];
   if (tenantId && typeof store.getTenantServices === 'function') {
-    try {
-      services = await store.getTenantServices(tenantId);
-      logger.info('Services loaded for tenant', { tenantId, count: services.length });
-    } catch (e) {
-      logger.warn('Failed to load tenant services', { error: e.message, tenantId });
-    }
-  } else {
-    logger.info('Services not loaded', { tenantId: !!tenantId, hasMethod: typeof store.getTenantServices });
+    try { services = await store.getTenantServices(tenantId); } catch (e) { /* ignore */ }
   }
 
   const { response, leadData } = await ai.generateResponse(session.id, history, memory, knowledgeDocs, tenant, services);
