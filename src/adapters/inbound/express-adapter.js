@@ -220,6 +220,10 @@ h1{font-size:22px;color:#1e293b;margin-bottom:8px}p{color:#64748b;margin-bottom:
     });
   }
 
+  app.get('/partners', (req, res) => {
+    res.sendFile(path.resolve(__dirname, '..', '..', '..', 'public', 'partners.html'));
+  });
+
   app.get('/dashboard', requireDashboardAuth, (req, res) => {
     res.sendFile(path.resolve(__dirname, '..', '..', '..', 'public', 'dashboard.html'));
   });
