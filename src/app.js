@@ -116,7 +116,7 @@ const whatsapp = createWhatsApp(deps);
 const telegram = createTelegram(deps);
 deps.getQrCode = whatsapp.getQrCode;
 deps.metaHandleIncoming = whatsapp.handleIncoming;
-deps.telegramHandleIncoming = telegram.handleIncoming;
+deps.telegramHandleIncoming = telegram.handleMessage;
 
 const app = createApp(deps);
 
