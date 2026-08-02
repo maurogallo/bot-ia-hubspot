@@ -38,6 +38,10 @@ const config = {
     apiKey: process.env.GROQ_API_KEY || '',
   },
 
+  openai: {
+    apiKey: process.env.OPENAI_API_KEY || '',
+  },
+
   whatsapp: {
     sessionPath: process.env.WHATSAPP_SESSION_PATH || './whatsapp-session',
     driver: process.env.WHATSAPP_DRIVER || 'webjs',
