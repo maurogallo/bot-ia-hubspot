@@ -100,7 +100,7 @@ async function handleMessage({ message, from, channel, store, ai, crm, calendar,
     }, ...knowledgeDocs];
   } else {
     knowledgeDocs = [{
-      content: \`INSTRUCCION: Ya tienes nombre (\${memory.contact_name}), email y telefono. Dile: "Gracias \${memory.contact_name}, tengo tus datos. ¿Te gustaria agendar una reunion?"\`
+      content: 'INSTRUCCION: Ya tienes nombre (' + memory.contact_name + '), email y telefono. Dile: "Gracias ' + memory.contact_name + ', tengo tus datos. Te gustaria agendar una reunion?" Si acepta usa intent="schedule" con action="request_availability".'
     }, ...knowledgeDocs];
   }
 
