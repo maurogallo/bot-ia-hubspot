@@ -18,7 +18,7 @@ function createStore() {
       await client.query(`
         CREATE TABLE IF NOT EXISTS sessions (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-          channel TEXT NOT NULL CHECK (channel IN ('whatsapp', 'web')),
+          channel TEXT NOT NULL CHECK (channel IN ('whatsapp', 'web', 'telegram')),
           contact_id TEXT, phone TEXT,
           context JSONB DEFAULT '{}', metadata JSONB DEFAULT '{}',
           is_active BOOLEAN DEFAULT true,
