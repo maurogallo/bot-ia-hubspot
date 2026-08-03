@@ -113,6 +113,10 @@ function createProvider(apiKey) {
       if (!cleanResponse || cleanResponse.length < 2) {
         cleanResponse = content.split('{')[0].trim();
       }
+      if (!cleanResponse || cleanResponse.length < 2) {
+        cleanResponse = '¿En qué puedo ayudarte?';
+      }
+      }
 
       if (responseCache.size >= CACHE_MAX) {
         const firstKey = responseCache.keys().next().value;
