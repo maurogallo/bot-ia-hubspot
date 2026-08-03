@@ -163,12 +163,15 @@ footer{position:fixed;bottom:0;left:0;right:0;padding:12px;background:#fff;borde
 <style>body{margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:#f0f4ff;font-family:-apple-system,sans-serif}
 h1{font-size:22px;color:#1e293b;margin-bottom:8px}p{color:#64748b;margin-bottom:24px}
 #qr{max-width:400px;width:90%}.steps{text-align:left;background:#fff;padding:20px 28px;border-radius:12px;box-shadow:0 1px 3px #00000010;max-width:400px;font-size:14px;color:#475569;line-height:1.8}
-.steps ol{margin:0;padding-left:20px}.steps li{margin:4px 0}</style></head>
+.steps ol{margin:0;padding-left:20px}.steps li{margin:4px 0}.qr-text{background:#fff;padding:12px;border-radius:8px;font-size:10px;word-break:break-all;max-width:400px;color:#64748b;margin-top:12px;display:none}
+#loading{color:#64748b;font-size:14px;margin-top:8px}</style></head>
 <body><h1>${config.business.name}</h1><p>Escanea con WhatsApp para conectar</p>
-<img id="qr" src="https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(qr)}" alt="QR Code">
+<span id="loading">Cargando QR...</span>
+<img id="qr" src="https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(qr)}" alt="QR Code" onerror="this.style.display='none';document.getElementById('loading').textContent='QR no cargo. Recarga la pagina.';document.getElementById('qr-text').style.display='block'" onload="document.getElementById('loading').style.display='none'">
+<div class="qr-text" id="qr-text">Si el QR no carga, copia esto y pegalo en WhatsApp Web: <br><br>${qr}</div>
 <div class="steps"><ol><li>Abrí WhatsApp en tu celular</li><li>Andá a <strong>Dispositivos vinculados</strong></li><li>Tocá <strong>Vincular un dispositivo</strong></li><li>Escaneá este código</li></ol></div>
-<p style="color:#94a3b8;font-size:12px;margin-top:16px">El QR se actualiza automáticamente</p>
-<script>setInterval(async function(){try{const r=await fetch('/whatsapp/qr?render=1');if(r.ok){const t=await r.text();const m=t.match(/<img[^>]+src="([^"]+)"/);if(m)document.getElementById('qr').src=m[1]}}catch(e){}},5000)</script>
+<p style="color:#94a3b8;font-size:12px;margin-top:16px">El QR se actualiza automaticamente</p>
+<script>setInterval(async function(){try{const r=await fetch('/whatsapp/qr?render=1');if(r.ok){const t=await r.text();const m=t.match(/<img[^>]+src=\"([^\"]+)\"/);if(m)document.getElementById('qr').src=m[1];document.getElementById('qr').style.display='';document.getElementById('loading').style.display='none'}}catch(e){}},8000)</script>
 </body></html>`);
     } else {
       res.json({ qr });
