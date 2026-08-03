@@ -1,5 +1,7 @@
 const logger = require('../logger');
 const { getTenantFeatures, getQuotaLimit } = require('./tenant-features');
+let notifyService = null;
+try { notifyService = require('../adapters/outbound/notification-service'); } catch (e) { /* optional */ }
 
 function extractMemoryFacts(leadData, message) {
   const facts = {};
@@ -117,8 +119,13 @@ async function handleMessage({ message, from, channel, store, ai, crm, calendar,
     const facts = extractMemoryFacts(leadData, message);
     const directFacts = extractFromMessage(message, memory);
     const allFacts = { ...facts, ...directFacts };
+    const hadEmail = !!memory.contact_email;
     for (const [key, value] of Object.entries(allFacts)) {
       if (value) await store.upsertMemory(session.id, key, value);
+    }
+    if (!hadEmail && allFacts.contact_email && allFacts.contact_name && notifyService) {
+      const updatedMemory = { ...memory, ...allFacts };
+      notifyService.sendNewLeadNotification(tenant, leadData, updatedMemory).catch(() => {});
     }
   }
 
