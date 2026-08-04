@@ -123,12 +123,12 @@ async function handleMessage({ message, from, channel, store, ai, crm, calendar,
     for (const [key, value] of Object.entries(allFacts)) {
       if (value) await store.upsertMemory(session.id, key, value);
     }
-    if (!hadEmail && allFacts.contact_email && allFacts.contact_name && notifyService) {
+    if (!hadEmail && allFacts.contact_email && (allFacts.contact_name || memory.contact_name) && notifyService) {
       const updatedMemory = { ...memory, ...allFacts };
       logger.info('Lead complete, sending notification', { email: allFacts.contact_email, tenant: tenant?.slug });
       notifyService.sendNewLeadNotification(tenant, leadData, updatedMemory).catch(() => {});
-    } else if (!hadEmail && allFacts.contact_email && allFacts.contact_name) {
-      logger.info('Lead complete but notifyService not available');
+    } else if (!hadEmail && allFacts.contact_email) {
+      logger.info('Lead has email but missing name', { hasNameInFacts: !!allFacts.contact_name, hasNameInMemory: !!memory.contact_name, hasService: !!notifyService });
     }
   }
 
