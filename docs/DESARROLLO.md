@@ -1,6 +1,6 @@
 # Bot IA HubSpot — Documentación de Desarrollo v3.0
 
-> Última actualización: 2 de agosto de 2026
+> Última actualización: 4 de agosto de 2026
 
 ---
 
@@ -90,8 +90,15 @@ Bot comercial multicanal con IA (GPT-4o mini) que captura, califica y registra l
 - ✅ Meta Business API (webhook, verify token)
 - ✅ Deduplicación de mensajes
 - ✅ Chromium lock fix en entrypoint
+- ✅ Documentación completa: `docs/meta-whatsapp-setup.md`
 
-### 2.11 Seguridad
+### 2.11 Email Notifications
+- ✅ `notification-service.js` con nodemailer (Gmail SMTP)
+- ✅ Email automático al dueño del tenant cuando se captura nombre + email
+- ✅ Configurable por tenant via `tenants.owner_email`
+- ✅ SMTP via app password (2FA)
+
+### 2.12 Seguridad
 - ✅ Rate limiting (200 req/min)
 - ✅ HMAC signature verification en webhooks
 - ✅ Dashboard con autenticación (usuario/contraseña)
@@ -269,7 +276,25 @@ src/
 
 ---
 
-## 10. Ventajas Competitivas
+## 10. Changelog
+
+### 4 de agosto de 2026
+- **Email notifications**: envio automatico a `synaptiqnova@gmail.com` al capturar lead completo (nombre + email)
+- **Meta WhatsApp**: token regenerado, webhook verificado, documentacion completa
+- **Quotas**: tenants subidos a plan Pro (ilimitado), usage_log limpiado
+- **Meta Business API credenciales**: App ID `2352206648917615`, Phone ID `1231833500016705`, WABA ID `1342251534637602`
+
+### 2 de agosto de 2026
+- **GPT-4o mini**: migracion completada (<2s, español excelente). Luego revertido a Groq por costo ($16,000 COP en testing)
+- **Templates 8 industrias**: Salud, Legal, Inmobiliaria, Educacion, Estetica, Restaurantes, Tecnologia, Finanzas
+- **Landing revendedores**: `/partners` con ROI calculator interactivo
+- **Telegram Bot**: `@Neowebstudiobot` funcionando con webhook
+- **Servicios dinamicos**: Synaptiq Nova con Fabric, Databricks, BI, Analytics
+- **Cache tenant-aware**: respuestas no se mezclan entre clientes
+- **Data extraction**: regex por mensaje para nombre/email/telefono
+- **Fallback Ollama**: cuando Groq falla, responde con LLM local
+
+## 11. Ventajas Competitivas
 
 | Ventaja | Detalle |
 |---|---|
