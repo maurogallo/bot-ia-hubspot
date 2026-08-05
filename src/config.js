@@ -44,7 +44,7 @@ const config = {
 
   whatsapp: {
     sessionPath: process.env.WHATSAPP_SESSION_PATH || './whatsapp-session',
-    driver: process.env.WHATSAPP_DRIVER || 'webjs',
+    driver: process.env.WHATSAPP_DRIVER || 'meta',
     meta: {
       phoneNumberId: process.env.META_PHONE_NUMBER_ID || '',
       accessToken: process.env.META_ACCESS_TOKEN || '',
