@@ -42,7 +42,7 @@ function createAdapter(deps) {
       if (message.isGroup) return;
       if (!message.body || !message.body.trim()) return;
       if (message.fromMe) return;
-      if (message.from && !message.from.endsWith('@c.us') && !message.from.match(/^\d+@/)) return;
+      if (!message.from || !message.from.endsWith('@c.us')) return;
       const msgId = message.id ? message.id.id || message.id._serialized : null;
       if (msgId && processedIds.has(msgId)) return;
       if (msgId) processedIds.add(msgId);
