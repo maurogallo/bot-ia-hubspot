@@ -40,6 +40,7 @@ services:
     restart: unless-stopped
 
   bot:
+    image: ghcr.io/maurogallo/bot-ia-hubspot:latest
     build: .
     entrypoint: ["/bin/sh", "-c", "rm -rf /tmp/org.chromium.Chromium.* /app/whatsapp-session/session/Singleton* /app/whatsapp-session/Singleton* 2>/dev/null; find /app/whatsapp-session -name Singleton* -delete 2>/dev/null; find /app/whatsapp-session -name LOCK -delete 2>/dev/null; exec node src/server.js"]
     depends_on:
@@ -48,16 +49,23 @@ services:
       ollama:
         condition: service_healthy
     environment:
-      NODE_ENV: production
+      NODE_ENV: ${NODE_ENV:-production}
       PORT: 3090
+      LOG_LEVEL: ${LOG_LEVEL:-info}
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: hubspot_bot
       DB_USER: postgres
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      DB_POOL_SIZE: ${DB_POOL_SIZE:-10}
       OLLAMA_BASE_URL: http://ollama:11434
       OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3}
       OLLAMA_EMBEDDING_MODEL: ${OLLAMA_EMBEDDING_MODEL:-nomic-embed-text}
+      OLLAMA_TEMPERATURE: ${OLLAMA_TEMPERATURE:-0.7}
+      OLLAMA_MAX_TOKENS: ${OLLAMA_MAX_TOKENS:-256}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       HUBSPOT_CLIENT_ID: ${HUBSPOT_CLIENT_ID:-}
       HUBSPOT_CLIENT_SECRET: ${HUBSPOT_CLIENT_SECRET:-}
       HUBSPOT_ACCESS_TOKEN: ${HUBSPOT_ACCESS_TOKEN:-}
@@ -65,13 +73,47 @@ services:
       HUBSPOT_REDIRECT_URI: ${HUBSPOT_REDIRECT_URI:-http://localhost:3090/oauth/callback}
       BUSINESS_NAME: ${BUSINESS_NAME:-NeoWeb Studio}
       BUSINESS_SERVICES: ${BUSINESS_SERVICES:-Desarrollo web, landing pages, automatización}
+      BUSINESS_TIMEZONE: ${BUSINESS_TIMEZONE:-America/Argentina/Buenos_Aires}
       CORS_ORIGIN: ${CORS_ORIGIN:-*}
+      WHATSAPP_DRIVER: ${WHATSAPP_DRIVER:-meta}
+      WHATSAPP_SESSION_PATH: ${WHATSAPP_SESSION_PATH:-./whatsapp-session}
+      META_PHONE_NUMBER_ID: ${META_PHONE_NUMBER_ID:-}
+      META_ACCESS_TOKEN: ${META_ACCESS_TOKEN:-}
+      META_VERIFY_TOKEN: ${META_VERIFY_TOKEN:-bot-verify-token}
+      META_API_VERSION: ${META_API_VERSION:-v21.0}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      GOOGLE_CLIENT_EMAIL: ${GOOGLE_CLIENT_EMAIL:-}
+      GOOGLE_PRIVATE_KEY: ${GOOGLE_PRIVATE_KEY:-}
+      GOOGLE_CALENDAR_ID: ${GOOGLE_CALENDAR_ID:-primary}
+      MEETING_DURATION_MINUTES: ${MEETING_DURATION_MINUTES:-30}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-bot@neowebstudio.com}
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET:-}
+      DASHBOARD_USERNAME: ${DASHBOARD_USERNAME:-}
+      DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD:-}
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-60000}
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-30}
+      BILLING_PROVIDER: ${BILLING_PROVIDER:-wompi}
+      BILLING_CURRENCY: ${BILLING_CURRENCY:-COP}
+      BILLING_WEBHOOK_URL: ${BILLING_WEBHOOK_URL:-/api/wompi-webhook}
+      BILLING_SUCCESS_URL: ${BILLING_SUCCESS_URL:-https://bot.synaptiqnova.online/dashboard}
+      BILLING_CANCEL_URL: ${BILLING_CANCEL_URL:-https://bot.synaptiqnova.online/dashboard}
+      BILLING_GRACE_DAYS: ${BILLING_GRACE_DAYS:-3}
+      BILLING_PRICE_STARTER: ${BILLING_PRICE_STARTER:-99000}
+      BILLING_PRICE_BUSINESS: ${BILLING_PRICE_BUSINESS:-249000}
+      BILLING_PRICE_PRO: ${BILLING_PRICE_PRO:-499000}
+      BILLING_PRICE_ENTERPRISE: ${BILLING_PRICE_ENTERPRISE:-990000}
+      WOMPI_ENVIRONMENT: ${WOMPI_ENVIRONMENT:-sandbox}
+      WOMPI_PUBLIC_KEY: ${WOMPI_PUBLIC_KEY:-}
+      WOMPI_PRIVATE_KEY: ${WOMPI_PRIVATE_KEY:-}
+      WOMPI_EVENTS_SECRET: ${WOMPI_EVENTS_SECRET:-}
     volumes:
       - whatsapp_sessions:/app/whatsapp-session
       - ./logs:/app/logs
-      - ./whatsapp-qr.txt:/app/whatsapp-qr.txt
-    ports:
-      - "3090:3090"
     restart: unless-stopped
 
 volumes:

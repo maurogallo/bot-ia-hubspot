@@ -46,6 +46,8 @@ jobs:
           script: |
             set -e
             cd ${{ secrets.DEPLOY_PATH }}
+            git fetch origin master
+            git checkout origin/master -- docker-compose.yml docker-compose.override.yml docker-compose.prod.yml
             docker compose pull bot
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --force-recreate bot
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --no-deps --force-recreate bot
             docker system prune -f
