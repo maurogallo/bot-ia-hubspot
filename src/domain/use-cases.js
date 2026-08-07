@@ -194,7 +194,7 @@ async function handleMessage({ message, from, channel, store, ai, crm, calendar,
     return { response: handoffResponse, leadData, handoffNeeded: true };
   }
 
-  if (leadData.intent === 'schedule' && features.scheduling && calendar && memory.contact_email) {
+  if (leadData.intent === 'schedule' && features.scheduling && calendar) {
     const schedResult = await handleScheduling({
       session, leadData, message, from, store, calendar, tenant, tenantId,
       memory,

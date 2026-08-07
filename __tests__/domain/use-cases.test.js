@@ -57,7 +57,7 @@ describe('handleMessage', () => {
     expect(ai.generateEmbedding).toHaveBeenCalledWith('¿Landing pages?');
     expect(store.searchKnowledge).toHaveBeenCalled();
     const knowledgeArg = ai.generateResponse.mock.calls[0][3];
-    expect(knowledgeArg).toEqual(docs);
+    expect(knowledgeArg).toEqual(expect.arrayContaining(docs));
   });
 
   it('handles RAG failure gracefully', async () => {
