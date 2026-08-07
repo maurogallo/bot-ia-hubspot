@@ -11,32 +11,10 @@ on:
         options: [staging, prod]
         default: staging
 
-permissions:
-  contents: read
-  packages: write
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: |
-            ghcr.io/${{ github.repository }}:latest
-            ghcr.io/${{ github.repository }}:${{ github.sha }}
-
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
         with:
@@ -47,7 +25,7 @@ jobs:
             set -e
             cd ${{ secrets.DEPLOY_PATH }}
             git fetch origin master
-            git checkout origin/master -- docker-compose.yml docker-compose.override.yml docker-compose.prod.yml
-            docker compose pull bot
+            git reset --hard origin/master
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml build bot
             docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --no-deps --force-recreate bot
             docker system prune -f

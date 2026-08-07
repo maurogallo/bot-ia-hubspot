@@ -40,7 +40,6 @@ services:
     restart: unless-stopped
 
   bot:
-    image: ghcr.io/maurogallo/bot-ia-hubspot:latest
     build: .
     entrypoint: ["/bin/sh", "-c", "rm -rf /tmp/org.chromium.Chromium.* /app/whatsapp-session/session/Singleton* /app/whatsapp-session/Singleton* 2>/dev/null; find /app/whatsapp-session -name Singleton* -delete 2>/dev/null; find /app/whatsapp-session -name LOCK -delete 2>/dev/null; exec node src/server.js"]
     depends_on:
