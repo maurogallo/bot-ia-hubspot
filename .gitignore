@@ -7,3 +7,6 @@ whatsapp-qr.txt
 .DS_Store
 *.log
 coverage/
+
+# Temp deploy scripts
+.tmp-issues/

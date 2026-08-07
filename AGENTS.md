@@ -210,8 +210,9 @@ No inventes información que no esté aquí.
 | — | Deduplicación de mensajes WhatsApp | Alta | ✅ Completado |
 | — | Chromium lock fix permanente | Alta | ✅ Completado |
 | 2 | Meta WhatsApp Business API (alternativa producción) | Alta | ✅ Implementado |
-| 3 | Tests automatizados (Jest, unitarios + integración) | Alta | ✅ Completado (64 tests) |
+| 3 | Tests automatizados (Jest, unitarios + integración) | Alta | ✅ Completado (74 tests) |
 | 5 | Creación automática de deals en HubSpot | Media | ✅ Completado |
+| — | Dashboard rediseñado (UI tipo BotPenguin + wizard "Create Chatbot" 4 pasos) | Alta | ✅ Completado |
 | 6 | Analíticas de conversión y métricas | Media | 📝 Pendiente |
 | 7 | Verificación de firmas HMAC en webhooks | Alta | ✅ Completado |
 | 8 | Soporte multilingüe (inglés, portugués) | Baja | 📝 Pendiente |
@@ -395,6 +396,46 @@ El usuario solicitó PostgreSQL para producción. Las sesiones y mensajes requie
 | `/api/knowledge` | POST | Agregar un nuevo documento (genera embedding automáticamente) |
 | `/api/knowledge/:id` | DELETE | Eliminar un documento por ID |
 | `/api/knowledge/reseed` | POST | Re-sembrar la knowledge base con los documentos por defecto |
+
+## Dashboard web (frontend modular)
+
+El dashboard es un SPA vanilla (sin frameworks) con arquitectura hexagonal aplicada al frontend: cada capa tiene una responsabilidad única y las vistas dependen de interfaces, no de detalles de HTTP o DOM.
+
+```
+public/
+├── dashboard.html                # Skeleton: sidebar + topbar + contenedores de vistas
+└── dashboard/
+    ├── styles.css                # Tema Material/BotPenguin (#226cf4, CSS variables)
+    └── js/
+        ├── api.js                # Adapter de salida (HTTP): única capa que conoce fetch/REST
+        ├── format.js             # Helpers puros (esc, formatTime, badges, quotaBar) — sin DOM
+        ├── ui.js                 # Componentes DOM reutilizables (modal, toast, bindActions)
+        ├── views/
+        │   ├── overview.js       # Resumen (métricas globales)
+        │   ├── conversations.js  # Sesiones activas + modal de detalle
+        │   ├── handoffs.js       # Derivaciones a humano + asignación
+        │   ├── leads.js          # Leads capturados
+        │   ├── clients.js        # Chatbots (AI Agents): wizard "Create Chatbot" 4 pasos + edit + servicios
+        │   └── appointments.js   # Citas agendadas
+        └── main.js               # Composición raíz: router de sidebar, polling de vista activa, DI
+```
+
+### Convenciones
+
+- **Vistas**: cada vista exporta `createXView(root)` → `{ render() }`. Registran eventos vía `bindActions` (delegación con `data-action`), nunca inline handlers.
+- **Estado global**: evita estado global; el wizard de clients.js usa un objeto `wizard` local al módulo.
+- **Polling**: `main.js` refresca solo la vista activa cada 5s (no todas), reduciendo carga.
+- **Agregar una vista nueva**: crear `views/foo.js` con `createFooView(root)`, agregar la sección `<section data-view="foo">` en `dashboard.html`, y registrarla en `VIEWS`/`TITLES` de `main.js`.
+
+### Wizard "Create Chatbot" (estilo BotPenguin)
+
+En la vista **Chatbots** el botón "+ Crear Chatbot" abre un wizard de 4 pasos:
+1. **Select Platform** — tarjetas de plataforma (Web, WhatsApp, Telegram soportadas; Instagram/Facebook/MS Teams/SMS como "Próximamente")
+2. **Usecase** — templates de industria o personalizado
+3. **Setup Bot** — nombre, slug (autogenerado desde el nombre), servicios, plan, dueño
+4. **Install Bot** — código del widget embebible (web) o instrucciones (WhatsApp/Telegram)
+
+El wizard crea un tenant vía `POST /api/tenants` con `features` según la plataforma elegida.
 
 ## Cómo correr el proyecto
 

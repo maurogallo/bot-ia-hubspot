@@ -4,670 +4,83 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Dashboard - Bot IA HubSpot</title>
-<style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f1f5f9;color:#1e293b;font-size:14px;line-height:1.5}
-.top{background:#0f172a;color:#fff;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
-.top h1{font-size:20px;font-weight:600}
-.top-right{display:flex;align-items:center;gap:16px;font-size:13px}
-.status{display:flex;gap:12px}
-.status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:4px}
-.status-dot.on{background:#22c55e;box-shadow:0 0 6px #22c55e88}
-.status-dot.off{background:#ef4444}
-.refresh-btn{background:#1e293b;border:1px solid #334155;color:#fff;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:13px}
-.refresh-btn:hover{background:#334155}
-.container{max-width:1400px;margin:0 auto;padding:24px}
-.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
-.card{background:#fff;border-radius:12px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
-.card-num{font-size:28px;font-weight:700;color:#0f172a}
-.card-label{font-size:13px;color:#64748b;margin-top:4px}
-.tabs{display:flex;gap:4px;margin-bottom:16px;background:#fff;border-radius:10px;padding:4px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
-.tab{padding:8px 20px;border:none;background:none;cursor:pointer;border-radius:8px;font-size:14px;font-weight:500;color:#64748b;transition:all .15s}
-.tab.active{background:#0f172a;color:#fff}
-.tab:hover:not(.active){background:#f1f5f9}
-.panel{display:none}
-.panel.active{display:block}
-.table-wrap{background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}
-table{width:100%;border-collapse:collapse}
-th{text-align:left;padding:12px 16px;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.5px;background:#f8fafc;border-bottom:1px solid #e2e8f0}
-td{padding:12px 16px;border-bottom:1px solid #f1f5f9;font-size:14px}
-tr:last-child td{border-bottom:none}
-tr:hover td{background:#f8fafc}
-.badge{padding:3px 10px;border-radius:20px;font-size:12px;font-weight:500}
-.badge-whatsapp{background:#22c55e20;color:#16a34a}
-.badge-web{background:#3b82f620;color:#2563eb}
-.badge-starter{background:#e2e8f020;color:#64748b}
-.badge-business{background:#3b82f620;color:#2563eb}
-.badge-pro{background:#eab30820;color:#a16207}
-.badge-enterprise{background:#ef444420;color:#dc2626}
-.badge-confirmed{background:#22c55e20;color:#16a34a}
-.badge-cancelled{background:#ef444420;color:#dc2626}
-.badge-pending{background:#eab30820;color:#a16207}
-.form-group{margin-bottom:12px}
-.form-group label{display:block;font-size:13px;color:#64748b;margin-bottom:4px}
-.form-group input,.form-group select{width:100%;padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;font-family:inherit}
-.form-group input:focus,.form-group select:focus{border-color:#2563eb;outline:none}
-.form-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
-.form-actions button{padding:8px 20px;border-radius:8px;font-size:14px;cursor:pointer;border:none}
-.btn-primary{background:#2563eb;color:#fff}
-.btn-primary:hover{background:#1d4ed8}
-.btn-secondary{background:#f1f5f9;color:#475569}
-.btn-secondary:hover{background:#e2e8f0}
-.msg-preview{max-width:350px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#475569;font-size:13px}
-.clickable{cursor:pointer;color:#2563eb;font-weight:500}
-.clickable:hover{text-decoration:underline}
-.empty{padding:40px;text-align:center;color:#94a3b8;font-size:15px}
-
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center}
-.modal-overlay.open{display:flex}
-.modal{background:#fff;border-radius:16px;width:90%;max-width:700px;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.3)}
-.modal-header{padding:16px 20px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between}
-.modal-header h2{font-size:16px;font-weight:600}
-.modal-close{width:32px;height:32px;border:none;background:#f1f5f9;border-radius:8px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center}
-.modal-close:hover{background:#e2e8f0}
-.modal-body{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:12px}
-.chat-msg{max-width:80%;padding:10px 14px;border-radius:12px;font-size:14px;line-height:1.5;word-wrap:break-word}
-.chat-msg.user{align-self:flex-end;background:#2563eb;color:#fff;border-bottom-right-radius:4px}
-.chat-msg.assistant{align-self:flex-start;background:#f1f5f9;color:#1e293b;border-bottom-left-radius:4px}
-.chat-msg .time{font-size:10px;opacity:.6;margin-top:4px}
-.chat-msg.user .time{text-align:right}
-.chat-msg.assistant .time{text-align:left}
-.modal-info{padding:12px 20px;background:#f8fafc;border-bottom:1px solid #e2e8f0;font-size:13px;display:flex;gap:20px;flex-wrap:wrap}
-.modal-info span{color:#64748b}
-.modal-info strong{color:#1e293b}
-@media(max-width:768px){
-  .top{flex-direction:column;gap:12px;padding:12px 16px}
-  .top-right{flex-wrap:wrap}
-  .container{padding:12px}
-  .cards{grid-template-columns:repeat(2,1fr)}
-  .table-wrap{overflow-x:auto}
-}
-</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/dashboard/styles.css">
 </head>
 <body>
-
-<div class="top">
-  <h1>Bot IA Dashboard</h1>
-  <div class="top-right">
-    <div class="status" id="status">
-      <span><span class="status-dot" id="dot-ollama"></span>Ollama</span>
-      <span><span class="status-dot" id="dot-db"></span>DB</span>
+<div class="app">
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-logo">B</div>
+      <div class="sidebar-brand-name">Bot IA</div>
     </div>
-    <span id="last-update" style="color:#94a3b8">---</span>
-    <button class="refresh-btn" id="refreshBtn">Actualizar</button>
-  </div>
+    <nav class="sidebar-nav">
+      <button class="nav-item active" data-view="overview">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+        <span>Resumen</span>
+      </button>
+      <button class="nav-item" data-view="conversations">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <span>Conversaciones</span>
+      </button>
+      <button class="nav-item" data-view="handoffs">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 0 1 10 10 4 4 0 0 1-4 4h-2a2 2 0 0 0-2 2v.5a2.5 2.5 0 0 1-2.5 2.5c-1.66 0-3-1.34-3-3V16a6 6 0 0 1 5.5-6z"/></svg>
+        <span>Handoffs</span>
+      </button>
+      <button class="nav-item" data-view="leads">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span>Leads</span>
+      </button>
+      <button class="nav-item" data-view="clients">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2a2 2 0 0 1 2 2v2h8a2 2 0 0 1 2 2v3a7 7 0 0 1-14 0V4a2 2 0 0 1 2-2z"/><path d="M3 12h4v3H3z"/></svg>
+        <span>Chatbots</span>
+      </button>
+      <button class="nav-item" data-view="appointments">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <span>Citas</span>
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="status-row">
+        <span class="status-chip"><span class="status-dot on" id="dot-ollama"></span>Ollama</span>
+        <span class="status-chip"><span class="status-dot on" id="dot-db"></span>DB</span>
+      </div>
+      <form action="/logout" method="post">
+        <button class="logout-btn" type="submit">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <span>Cerrar sesión</span>
+        </button>
+      </form>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <h1 id="pageTitle">Resumen</h1>
+      <div class="topbar-right">
+        <span class="last-update" id="lastUpdate">—</span>
+        <button class="btn btn-primary" id="refreshBtn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          Actualizar
+        </button>
+      </div>
+    </header>
+
+    <div class="content">
+      <section class="view active" data-view="overview" id="view-overview"></section>
+      <section class="view" data-view="conversations" id="view-conversations"></section>
+      <section class="view" data-view="handoffs" id="view-handoffs"></section>
+      <section class="view" data-view="leads" id="view-leads"></section>
+      <section class="view" data-view="clients" id="view-clients"></section>
+      <section class="view" data-view="appointments" id="view-appointments"></section>
+    </div>
+  </main>
 </div>
 
-<div class="container">
-  <div class="cards" id="stats">
-    <div class="card"><div class="card-num" id="stat-sessions">-</div><div class="card-label">Total Conversaciones</div></div>
-    <div class="card"><div class="card-num" id="stat-active">-</div><div class="card-label">Activas</div></div>
-    <div class="card"><div class="card-num" id="stat-leads">-</div><div class="card-label">Leads Capturados</div></div>
-    <div class="card"><div class="card-num" id="stat-24h">-</div><div class="card-label">Mensajes (24h)</div></div>
-  </div>
+<div id="modalRoot"></div>
 
-  <div class="tabs">
-    <button class="tab active" data-tab="conversations">Conversaciones</button>
-    <button class="tab" data-tab="handoffs">Handoffs</button>
-    <button class="tab" data-tab="leads">Leads</button>
-    <button class="tab" data-tab="clients">Clientes</button>
-    <button class="tab" data-tab="appointments">Citas</button>
-  </div>
-
-  <div class="panel active" id="panel-conversations">
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Canal</th><th>Contacto</th><th>Último mensaje</th><th>Mensajes</th><th>Última actividad</th></tr></thead>
-        <tbody id="conv-tbody"><tr><td colspan="5" class="empty">Cargando...</td></tr></tbody>
-      </table>
-    </div>
-  </div>
-
-  <div class="panel" id="panel-handoffs">
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Canal</th><th>Contacto</th><th>Motivo</th><th>Confianza</th><th>Mensajes</th><th>Última actividad</th><th>Acción</th></tr></thead>
-        <tbody id="handoff-tbody"><tr><td colspan="7" class="empty">Cargando...</td></tr></tbody>
-      </table>
-    </div>
-  </div>
-
-  <div class="panel" id="panel-leads">
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Nombre</th><th>Email</th><th>Teléfono</th><th>HubSpot ID</th><th>Última interacción</th></tr></thead>
-        <tbody id="leads-tbody"><tr><td colspan="5" class="empty">Cargando...</td></tr></tbody>
-      </table>
-    </div>
-  </div>
-
-  <div class="panel" id="panel-clients">
-    <div style="margin-bottom:12px">
-      <button class="refresh-btn" id="newClientBtn" style="background:#2563eb;border-color:#2563eb">+ Nuevo Cliente</button>
-    </div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Slug</th><th>Negocio</th><th>Plan</th><th>Uso (Conversaciones)</th><th>WhatsApp</th><th>Estado</th><th>Acciones</th></tr></thead>
-        <tbody id="clients-tbody"><tr><td colspan="7" class="empty">Cargando...</td></tr></tbody>
-      </table>
-    </div>
-  </div>
-
-  <div class="panel" id="panel-appointments">
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Cliente</th><th>Email</th><th>Servicio</th><th>Fecha</th><th>Estado</th><th>Acciones</th></tr></thead>
-        <tbody id="appointments-tbody"><tr><td colspan="6" class="empty">Cargando...</td></tr></tbody>
-      </table>
-    </div>
-  </div>
-</div>
-
-<div class="modal-overlay" id="modal">
-  <div class="modal">
-    <div class="modal-header"><h2>Conversación</h2><button class="modal-close" id="modalClose">×</button></div>
-    <div class="modal-info" id="modalInfo"></div>
-    <div class="modal-body" id="modalBody"></div>
-  </div>
-</div>
-
-<div class="modal-overlay" id="clientModal">
-  <div class="modal">
-    <div class="modal-header"><h2 id="clientModalTitle">Nuevo Cliente</h2><button class="modal-close" onclick="$('clientModal').classList.remove('open')">×</button></div>
-    <div class="modal-body" id="clientModalBody" style="gap:12px"></div>
-  </div>
-</div>
-</div>
-
-<script>
-const POLL_INTERVAL = 5000;
-let pollTimer;
-
-function $(id) { return document.getElementById(id); }
-
-async function fetchJSON(url, options) {
-  const res = options ? await fetch(url, options) : await fetch(url);
-  if (!res.ok) throw new Error(res.statusText);
-  return res.json();
-}
-
-function formatTime(d) {
-  const date = new Date(d);
-  const now = new Date();
-  const diff = now - date;
-  if (diff < 60000) return 'Ahora';
-  if (diff < 3600000) return Math.floor(diff/60000) + 'm';
-  if (diff < 86400000) return Math.floor(diff/3600000) + 'h';
-  return date.toLocaleDateString('es-ES', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
-}
-
-function esc(s) { const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
-
-function renderConversations(convs) {
-  const tb = $('conv-tbody');
-  if (!convs || convs.length === 0) { tb.innerHTML = '<tr><td colspan="5" class="empty">Sin conversaciones activas</td></tr>'; return; }
-  tb.innerHTML = convs.map(c => {
-    const channelBadge = c.channel === 'whatsapp' ? '<span class="badge badge-whatsapp">WhatsApp</span>' : '<span class="badge badge-web">Web</span>';
-    const contact = c.phone || c.contact_id || 'Anónimo';
-    return `<tr><td>${channelBadge}</td>
-      <td class="clickable" onclick="openConversation('${c.id}')">${esc(contact)}</td>
-      <td><div class="msg-preview">${esc(c.last_message || '—')}</div></td>
-      <td>${c.message_count || 0}</td>
-      <td>${formatTime(c.updated_at)}</td></tr>`;
-  }).join('');
-}
-
-function renderHandoffs(handoffs) {
-  const tb = $('handoff-tbody');
-  if (!handoffs || handoffs.length === 0) { tb.innerHTML = '<tr><td colspan="7" class="empty">Sin handoffs pendientes</td></tr>'; return; }
-  tb.innerHTML = handoffs.map(h => {
-    const ctx = h.context || {};
-    const channelBadge = h.channel === 'whatsapp' ? '<span class="badge badge-whatsapp">WhatsApp</span>' : '<span class="badge badge-web">Web</span>';
-    const contact = h.phone || h.contact_id || 'Anónimo';
-    return `<tr><td>${channelBadge}</td>
-      <td class="clickable" onclick="openConversation('${h.id}')">${esc(contact)}</td>
-      <td>${esc(ctx.handoffReason || '—')}</td>
-      <td>${ctx.handoffConfidence ? Math.round(ctx.handoffConfidence * 100) + '%' : '—'}</td>
-      <td>${h.message_count || 0}</td>
-      <td>${formatTime(h.updated_at)}</td>
-      <td><button class="refresh-btn" onclick="assignHandoff('${h.id}')" style="padding:4px 12px;font-size:12px">Asignarme</button></td></tr>`;
-  }).join('');
-}
-
-async function assignHandoff(id) {
-  try {
-    await fetch('/api/dashboard/handoffs/' + id + '/assign', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({assignedTo:'Agente'}) });
-    loadAll();
-  } catch (e) {
-    alert('Error al asignar handoff');
-  }
-}
-
-function renderLeads(leads) {
-  const tb = $('leads-tbody');
-  if (!leads || leads.length === 0) { tb.innerHTML = '<tr><td colspan="5" class="empty">Sin leads capturados</td></tr>'; return; }
-  tb.innerHTML = leads.map(l => `<tr>
-    <td><strong>${esc(l.name) || '—'}</strong></td>
-    <td>${esc(l.email) || '—'}</td>
-    <td>${esc(l.phone) || '—'}</td>
-    <td style="font-size:12px;color:#64748b">${esc(l.hubspot_id) || '—'}</td>
-    <td>${l.last_interaction ? formatTime(l.last_interaction) : '—'}</td>
-  </tr>`).join('');
-}
-
-function renderStats(stats) {
-  if (!stats) return;
-  $('stat-sessions').textContent = stats.total_sessions || 0;
-  $('stat-active').textContent = stats.active_sessions || 0;
-  $('stat-leads').textContent = stats.total_leads || 0;
-  $('stat-24h').textContent = stats.messages_24h || 0;
-}
-
-function updateStatus(ollama, db) {
-  $('dot-ollama').className = 'status-dot ' + (ollama ? 'on' : 'off');
-  $('dot-db').className = 'status-dot ' + (db ? 'on' : 'off');
-}
-
-async function loadAll() {
-  try {
-    const [stats, convs, handoffs, leads] = await Promise.all([
-      fetchJSON('/api/dashboard/stats'),
-      fetchJSON('/api/dashboard/conversations'),
-      fetchJSON('/api/dashboard/handoffs'),
-      fetchJSON('/api/dashboard/leads'),
-    ]);
-    renderStats(stats);
-    renderConversations(convs);
-    renderHandoffs(handoffs);
-    renderLeads(leads);
-    updateStatus(true, true);
-  } catch (e) {
-    updateStatus(false, false);
-  }
-  $('last-update').textContent = new Date().toLocaleTimeString('es-ES');
-}
-
-async function loadClients() {
-  try {
-    const tenants = await fetchJSON('/api/tenants');
-    var usages = {};
-    for (var i = 0; i < tenants.length; i++) {
-      try {
-        var u = await fetchJSON('/api/tenants/' + tenants[i].slug + '/usage');
-        usages[tenants[i].slug] = u;
-      } catch(e) { /* ignore */ }
-    }
-    renderClients(tenants, usages);
-  } catch (e) { /* ignore */ }
-}
-
-async function loadAppointments() {
-  try {
-    const apps = await fetchJSON('/api/appointments');
-    renderAppointments(apps);
-  } catch (e) { /* ignore */ }
-}
-
-function copyWidgetCode(slug, businessName) {
-  var code = '<script src="https://bot.synaptiqnova.online/widget.js" data-tenant="' + slug + '" data-primary="#2563eb"><\/script>';
-  navigator.clipboard.writeText(code).then(function() {
-    alert('Codigo copiado. Pegalo antes de </body> en el sitio de ' + businessName);
-  });
-}
-
-function planBadge(plan) {
-  var cls = 'badge badge-' + (plan || 'starter');
-  return '<span class="' + cls + '">' + (plan || 'starter').toUpperCase() + '</span>';
-}
-
-function statusBadge(status) {
-  var cls = 'badge badge-' + (status || 'confirmed');
-  return '<span class="' + cls + '">' + (status || 'confirmed') + '</span>';
-}
-
-function quotaBar(used, limit) {
-  if (limit === -1) return '<span style="font-size:12px;color:#22c55e">Ilimitado</span>';
-  var pct = Math.min(100, Math.round((used / limit) * 100));
-  var color = pct > 90 ? '#ef4444' : pct > 70 ? '#eab308' : '#22c55e';
-  return '<div style="display:flex;align-items:center;gap:8px"><div style="flex:1;height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden"><div style="height:100%;width:' + pct + '%;background:' + color + ';border-radius:3px"></div></div><span style="font-size:12px;white-space:nowrap">' + used + '/' + limit + '</span></div>';
-}
-
-function renderClients(tenants, usages) {
-  usages = usages || {};
-  var tb = $('clients-tbody');
-  if (!tenants || tenants.length === 0) { tb.innerHTML = '<tr><td colspan="7" class="empty">Sin clientes. Crea el primero con el boton + Nuevo Cliente</td></tr>'; return; }
-  tb.innerHTML = tenants.map(function (t) {
-    var u = usages[t.slug] || {};
-    var used = u.conversations || 0;
-    var limit = t.plan === 'starter' ? 100 : t.plan === 'business' ? 500 : -1;
-    return '<tr><td><strong>' + esc(t.slug) + '</strong></td>' +
-      '<td>' + esc(t.business_name) + '</td>' +
-      '<td>' + planBadge(t.plan) + '</td>' +
-      '<td style="min-width:180px">' + quotaBar(used, limit) + '</td>' +
-      '<td>' + (t.whatsapp_phone || '—') + '</td>' +
-      '<td>' + (t.is_active ? '<span style="color:#22c55e">Activo</span>' : '<span style="color:#ef4444">Inactivo</span>') + '</td>' +
-      '<td><button class="refresh-btn" onclick="copyWidgetCode(\'' + esc(t.slug) + '\',\'' + esc(t.business_name) + '\')" style="padding:4px 8px;font-size:12px;margin-right:4px;background:#22c55e;border-color:#22c55e">&lt;/&gt;</button>' +
-      '<button class="refresh-btn" onclick="editClient(\'' + esc(t.slug) + '\')" style="padding:4px 12px;font-size:12px;margin-right:4px">Editar</button>' +
-      '<button class="refresh-btn" onclick="deleteClient(\'' + esc(t.slug) + '\')" style="padding:4px 12px;font-size:12px;background:#ef4444;border-color:#ef4444">X</button></td></tr>';
-  }).join('');
-}
-
-function renderAppointments(apps) {
-  var tb = $('appointments-tbody');
-  if (!apps || apps.length === 0) { tb.innerHTML = '<tr><td colspan="6" class="empty">Sin citas agendadas</td></tr>'; return; }
-  tb.innerHTML = apps.map(function (a) {
-    return '<tr><td><strong>' + esc(a.contact_name || '—') + '</strong></td>' +
-      '<td>' + esc(a.contact_email) + '</td>' +
-      '<td>' + esc(a.service_interest || '—') + '</td>' +
-      '<td>' + (a.start_time ? new Date(a.start_time).toLocaleString('es-ES', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—') + '</td>' +
-      '<td>' + statusBadge(a.status) + '</td>' +
-      '<td>' + (a.status === 'confirmed' ? '<button class="refresh-btn" onclick="cancelAppointment(\'' + esc(a.id) + '\')" style="padding:4px 12px;font-size:12px;background:#ef4444;border-color:#ef4444">Cancelar</button>' : '') + '</td></tr>';
-  }).join('');
-}
-
-async function cancelAppointment(id) {
-  if (!confirm('Cancelar esta cita?')) return;
-  try {
-    await fetch('/api/appointments/' + id, { method:'DELETE' });
-    loadAppointments();
-  } catch(e) { alert('Error al cancelar cita'); }
-}
-
-function showClientForm(data) {
-  data = data || {};
-  $('clientModalTitle').textContent = data.slug ? 'Editar Cliente: ' + data.business_name : 'Nuevo Cliente - Paso 1/3';
-
-  var steps = !data.slug ? '<div style="display:flex;gap:4px;margin-bottom:12px"><span style="background:#2563eb;color:#fff;padding:4px 12px;border-radius:6px;font-size:12px;font-weight:600">Paso 1</span><span style="background:#f1f5f9;color:#64748b;padding:4px 12px;border-radius:6px;font-size:12px">Paso 2</span><span style="background:#f1f5f9;color:#64748b;padding:4px 12px;border-radius:6px;font-size:12px">Paso 3</span></div>' : '';
-
-  $('clientModalBody').innerHTML = steps +
-    (!data.slug ? '<div class="form-group"><label>Usar template de industria</label><select id="f-template" onchange="loadTemplate()"><option value="">Personalizado</option></select><p style="font-size:11px;color:#64748b;margin-top:2px">Pre-carga servicios, conocimiento y preguntas para la industria</p></div>' : '') +
-    '<div class="form-group"><label>Slug (identificador unico)</label><input id="f-slug" value="' + (data.slug || '') + '" placeholder="clinica-san-jose" ' + (data.slug ? 'readonly' : '') + '></div>' +
-    '<div class="form-group"><label>Nombre del Negocio</label><input id="f-name" value="' + (data.business_name || '') + '" placeholder="Clinica San Jose"></div>' +
-    '<div class="form-group"><label>Descripcion de servicios</label><input id="f-services" value="' + (data.business_services || '') + '" placeholder="Consultas medicas, tratamientos, emergencias"></div>' +
-    '<div class="form-group"><label>Plan</label><select id="f-plan" onchange="updatePlanInfo()">' +
-    '<option value="starter"' + (data.plan==='starter'?' selected':'') + '>Starter - Chat + Agendamiento (100 conv/mes)</option>' +
-    '<option value="business"' + (data.plan==='business'?' selected':'') + '>Business - Chat + Agendamiento + CRM (500 conv/mes)</option>' +
-    '<option value="pro"' + (data.plan==='pro'?' selected':'') + '>Pro - Ilimitado + API + Analytics</option>' +
-    '<option value="enterprise"' + (data.plan==='enterprise'?' selected':'') + '>Enterprise - Todo + Soporte + Onboarding</option>' +
-    '</select></div>' +
-    '<div id="plan-info" style="background:#f8fafc;border-radius:8px;padding:12px;font-size:13px;margin-bottom:12px"></div>' +
-    '<div class="form-group"><label>WhatsApp (numero)</label><input id="f-wa" value="' + (data.whatsapp_phone || '') + '" placeholder="+54911..."></div>' +
-    '<div class="form-group"><label>Nombre del Dueno</label><input id="f-owner" value="' + (data.owner_name || '') + '" placeholder="Dr. Juan Perez"></div>' +
-    '<div class="form-group"><label>Email del Dueno</label><input id="f-owner-email" value="' + (data.owner_email || '') + '" placeholder="juan@clinicasanjose.com"></div>' +
-    '<div class="form-actions"><button class="btn-secondary" onclick="$(\'clientModal\').classList.remove(\'open\')">Cancelar</button>' +
-    (data.slug
-      ? '<button class="btn-primary" onclick="saveClient(\'' + data.slug + '\')">Guardar</button><button class="btn-primary" style="background:#22c55e" onclick="showServicesStep(\'' + data.slug + '\')">Servicios &raquo;</button>'
-      : '<button class="btn-primary" onclick="goToWizardStep2()">Siguiente &raquo;</button>') +
-    '</div>';
-  setTimeout(function() { if (typeof updatePlanInfo === 'function') updatePlanInfo(); if (typeof loadTemplatesDropdown === 'function') loadTemplatesDropdown(); }, 50);
-  $('clientModal').classList.add('open');
-}
-
-function updatePlanInfo() {
-  var features = {
-    starter: { chat: true, scheduling: true, crm: false, kb: false, conv: '100/mes', api: false },
-    business: { chat: true, scheduling: true, crm: true, kb: true, conv: '500/mes', api: false },
-    pro: { chat: true, scheduling: true, crm: true, kb: true, conv: 'Ilimitadas', api: true },
-    enterprise: { chat: true, scheduling: true, crm: true, kb: true, conv: 'Ilimitadas', api: true, support: true },
-  };
-  var plan = $('f-plan') ? $('f-plan').value : 'starter';
-  var f = features[plan];
-  var badges = '<span style="display:inline-block;background:#22c55e20;color:#16a34a;padding:2px 8px;border-radius:4px;margin:2px;font-size:11px">Chat</span>';
-  if (f.scheduling) badges += '<span style="display:inline-block;background:#2563eb20;color:#2563eb;padding:2px 8px;border-radius:4px;margin:2px;font-size:11px">Agendamiento</span>';
-  if (f.crm) badges += '<span style="display:inline-block;background:#eab30820;color:#a16207;padding:2px 8px;border-radius:4px;margin:2px;font-size:11px">CRM</span>';
-  if (f.kb) badges += '<span style="display:inline-block;background:#8b5cf620;color:#7c3aed;padding:2px 8px;border-radius:4px;margin:2px;font-size:11px">Knowledge Base</span>';
-  if (f.api) badges += '<span style="display:inline-block;background:#ef444420;color:#dc2626;padding:2px 8px;border-radius:4px;margin:2px;font-size:11px">API</span>';
-  if (f.support) badges += '<span style="display:inline-block;background:#f9731620;color:#ea580c;padding:2px 8px;border-radius:4px;margin:2px;font-size:11px">Soporte dedicado</span>';
-  $('plan-info').innerHTML = '<strong>Incluye:</strong><br>' + badges + '<br><span style="color:#64748b">Conversaciones: ' + f.conv + '</span>';
-}
-
-function goToWizardStep2() {
-  var slug = $('f-slug').value.trim();
-  var name = $('f-name').value.trim();
-  if (!slug || !name) { alert('Slug y Nombre son obligatorios'); return; }
-
-  window._wizardData = {
-    slug: slug,
-    businessName: name,
-    businessServices: $('f-services').value,
-    plan: $('f-plan').value,
-    whatsappPhone: $('f-wa').value,
-    ownerName: $('f-owner').value,
-    ownerEmail: $('f-owner-email').value,
-  };
-
-  $('clientModalTitle').textContent = 'Nuevo Cliente - Paso 2/3';
-  $('clientModalBody').innerHTML =
-    '<div style="display:flex;gap:4px;margin-bottom:12px"><span style="background:#22c55e;color:#fff;padding:4px 12px;border-radius:6px;font-size:12px;font-weight:600">Paso 1 ' + checkIcon() + '</span><span style="background:#2563eb;color:#fff;padding:4px 12px;border-radius:6px;font-size:12px;font-weight:600">Paso 2</span><span style="background:#f1f5f9;color:#64748b;padding:4px 12px;border-radius:6px;font-size:12px">Paso 3</span></div>' +
-    '<p style="margin-bottom:12px;color:#64748b">Selecciona las funcionalidades para ' + esc(name) + ':</p>' +
-    '<div class="form-group" style="display:flex;align-items:center;gap:12px"><input type="checkbox" id="w-feat-wa" checked style="width:auto"><label for="w-feat-wa">WhatsApp</label></div>' +
-    '<div class="form-group" style="display:flex;align-items:center;gap:12px"><input type="checkbox" id="w-feat-web" checked style="width:auto"><label for="w-feat-web">Chat Web (Widget)</label></div>' +
-    '<div class="form-group" style="display:flex;align-items:center;gap:12px"><input type="checkbox" id="w-feat-sched" style="width:auto"><label for="w-feat-sched">Agendamiento (Google Calendar)</label></div>' +
-    '<div class="form-group" style="display:flex;align-items:center;gap:12px"><input type="checkbox" id="w-feat-crm" style="width:auto"><label for="w-feat-crm">CRM (HubSpot)</label></div>' +
-    '<div class="form-group" style="display:flex;align-items:center;gap:12px"><input type="checkbox" id="w-feat-kb" style="width:auto"><label for="w-feat-kb">Knowledge Base (RAG)</label></div>' +
-    '<div class="form-actions"><button class="btn-secondary" onclick="showClientForm({})">Atras</button><button class="btn-primary" onclick="goToWizardStep3()">Siguiente &raquo;</button></div>';
-}
-
-function checkIcon() { return '<span style="color:#22c55e;font-size:10px">&#10003;</span>'; }
-
-function goToWizardStep3() {
-  $('clientModalTitle').textContent = 'Nuevo Cliente - Paso 3/3';
-  $('clientModalBody').innerHTML =
-    '<div style="display:flex;gap:4px;margin-bottom:12px"><span style="background:#22c55e;color:#fff;padding:4px 12px;border-radius:6px;font-size:12px;font-weight:600">Paso 1 ' + checkIcon() + '</span><span style="background:#22c55e;color:#fff;padding:4px 12px;border-radius:6px;font-size:12px;font-weight:600">Paso 2 ' + checkIcon() + '</span><span style="background:#2563eb;color:#fff;padding:4px 12px;border-radius:6px;font-size:12px;font-weight:600">Paso 3</span></div>' +
-    '<p style="margin-bottom:12px;color:#64748b">Define los servicios que ofrece este cliente. El bot los usara para recomendar.</p>' +
-    '<div id="wizardServices" style="display:flex;flex-direction:column;gap:8px">' +
-    '<div style="display:flex;gap:8px"><input id="ws-name" placeholder="Nombre del servicio" style="flex:1"><input id="ws-price" placeholder="Precio" style="width:100px" type="number"><input id="ws-label" placeholder="USD" style="width:70px"></div>' +
-    '<button class="refresh-btn" onclick="addWizardService()" style="align-self:flex-start">+ Agregar</button>' +
-    '<div id="wizardServiceList"></div>' +
-    '</div>' +
-    '<div class="form-actions"><button class="btn-secondary" onclick="goToWizardStep2()">Atras</button><button class="btn-primary" onclick="finishWizard()">Crear Cliente</button></div>';
-  window._wizardServices = [];
-}
-
-function addWizardService() {
-  var n = $('ws-name').value.trim();
-  var p = $('ws-price').value.trim();
-  var l = $('ws-label').value.trim();
-  if (!n) return;
-  window._wizardServices = window._wizardServices || [];
-  window._wizardServices.push({ name: n, price: p ? parseFloat(p) : null, priceLabel: l || 'USD' });
-  $('ws-name').value = ''; $('ws-price').value = ''; $('ws-label').value = '';
-  renderWizardServices();
-}
-
-function renderWizardServices() {
-  var list = window._wizardServices || [];
-  $('wizardServiceList').innerHTML = list.map(function (s, i) {
-    return '<div style="display:flex;align-items:center;gap:8px;padding:6px 12px;background:#f8fafc;border-radius:8px"><span style="flex:1;font-weight:500">' + esc(s.name) + '</span><span style="color:#64748b;font-size:13px">' + (s.price ? '$' + s.price + ' ' + s.priceLabel : 'Consultar') + '</span><button style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:16px" onclick="window._wizardServices.splice(' + i + ',1);renderWizardServices()">x</button></div>';
-  }).join('');
-}
-
-async function finishWizard() {
-  var data = window._wizardData;
-  if (!data || !data.slug || !data.businessName) { alert('Faltan datos del paso 1. Empeza de nuevo.'); return; }
-
-  var features = {};
-  if ($('w-feat-wa') && $('w-feat-wa').checked) features.whatsapp = true;
-  if ($('w-feat-web') && $('w-feat-web').checked) features.webChat = true;
-  if ($('w-feat-sched') && $('w-feat-sched').checked) features.scheduling = true;
-  if ($('w-feat-crm') && $('w-feat-crm').checked) features.crm = true;
-  if ($('w-feat-kb') && $('w-feat-kb').checked) features.knowledgeBase = true;
-
-  var plan = data.plan || 'starter';
-  if (features.scheduling || features.crm) plan = 'business';
-  if (features.crm && features.scheduling && features.knowledgeBase) plan = 'pro';
-
-  var body = {
-    slug: data.slug,
-    businessName: data.businessName,
-    businessServices: data.businessServices,
-    template: window._templateData ? window._templateData.name : null,
-    plan: plan,
-    whatsappPhone: data.whatsappPhone,
-    ownerName: data.ownerName,
-    ownerEmail: data.ownerEmail,
-    features: features,
-  };
-
-  try {
-    await fetchJSON('/api/tenants', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
-    var services = window._wizardServices || [];
-    var svcUrl = '/api/tenants/' + data.slug + '/services';
-    for (var i = 0; i < services.length; i++) {
-      await fetchJSON(svcUrl, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(services[i]) });
-    }
-    $('clientModal').classList.remove('open');
-    loadClients();
-  } catch(e) { alert('Error al crear cliente: ' + e.message); }
-}
-
-// --- Services editing for existing tenants ---
-
-async function showServicesStep(slug) {
-  try {
-    var services = await fetchJSON('/api/tenants/' + slug + '/services');
-    $('clientModalTitle').textContent = 'Servicios - ' + slug;
-    $('clientModalBody').innerHTML =
-      '<p style="margin-bottom:12px;color:#64748b">Define los servicios de este cliente. El bot los usara en las conversaciones.</p>' +
-      '<div style="display:flex;gap:8px;margin-bottom:12px"><input id="ss-name" placeholder="Nombre del servicio" style="flex:1"><input id="ss-price" placeholder="Precio" style="width:100px" type="number"><input id="ss-label" placeholder="USD" style="width:70px"><input id="ss-desc" placeholder="Descripcion (opcional)" style="width:200px"></div>' +
-      '<button class="refresh-btn" onclick="addService(\'' + slug + '\')" style="align-self:flex-start;margin-bottom:12px">+ Agregar Servicio</button>' +
-      '<div id="svcList">' + renderServiceList(services, slug) + '</div>' +
-      '<div class="form-actions"><button class="btn-secondary" onclick="editClientBack(\'' + slug + '\')">Volver</button><button class="btn-primary" onclick="$(\'clientModal\').classList.remove(\'open\');loadClients()">Listo</button></div>';
-    $('clientModal').classList.add('open');
-  } catch(e) { alert('Error: ' + e.message); }
-}
-
-function renderServiceList(services, slug) {
-  if (!services || services.length === 0) return '<div style="color:#94a3b8;padding:20px;text-align:center">Sin servicios definidos. Agrega al menos uno.</div>';
-  return services.map(function (s) {
-    return '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8fafc;border-radius:8px;margin-bottom:4px"><span style="flex:1;font-weight:500">' + esc(s.name) + '</span><span style="font-size:12px;color:#64748b">' + (s.description ? esc(s.description) + ' - ' : '') + '</span><span style="color:#2563eb;font-size:13px">' + (s.price ? '$' + s.price + ' ' + (s.price_label || 'USD') : 'Consultar') + '</span><button style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:16px" onclick="deleteService(\'' + slug + '\',\'' + s.id + '\')">x</button></div>';
-  }).join('');
-}
-
-async function addService(slug) {
-  var n = $('ss-name').value.trim();
-  if (!n) { alert('Nombre es obligatorio'); return; }
-  var p = $('ss-price').value;
-  var l = $('ss-label').value || 'USD';
-  var d = $('ss-desc').value;
-  var body = { name: n, price: p ? parseFloat(p) : null, priceLabel: l, description: d };
-  await fetchJSON('/api/tenants/' + slug + '/services', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
-  $('ss-name').value = ''; $('ss-price').value = ''; $('ss-label').value = ''; $('ss-desc').value = '';
-  var services = await fetchJSON('/api/tenants/' + slug + '/services');
-  $('svcList').innerHTML = renderServiceList(services, slug);
-}
-
-async function deleteService(slug, id) {
-  await fetchJSON('/api/tenants/' + slug + '/services/' + id, { method:'DELETE' });
-  var services = await fetchJSON('/api/tenants/' + slug + '/services');
-  $('svcList').innerHTML = renderServiceList(services, slug);
-}
-
-async function editClientBack(slug) {
-  var t = await fetchJSON('/api/tenants/' + slug);
-  showClientForm(t);
-}
-
-async function saveClient(slug) {
-  var body = {
-    slug: $('f-slug').value,
-    businessName: $('f-name').value,
-    businessServices: $('f-services').value,
-    plan: $('f-plan').value,
-    whatsappPhone: $('f-wa').value,
-    ownerName: $('f-owner').value,
-    ownerEmail: $('f-owner-email').value,
-  };
-  if (!body.slug || !body.businessName) { alert('Slug y Nombre son obligatorios'); return; }
-  try {
-    await fetchJSON('/api/tenants/' + slug, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
-    $('clientModal').classList.remove('open');
-    loadClients();
-  } catch(e) { alert('Error al guardar cliente'); }
-}
-
-
-async function editClient(slug) {
-  try {
-    var t = await fetchJSON('/api/tenants/' + slug);
-    showClientForm(t);
-  } catch(e) { alert('Error al cargar cliente'); }
-}
-
-async function deleteClient(slug) {
-  if (!confirm('Desactivar cliente ' + slug + '?')) return;
-  try {
-    await fetch('/api/tenants/' + slug, { method:'DELETE' });
-    loadClients();
-  } catch(e) { alert('Error al desactivar cliente'); }
-}
-
-async function loadTemplatesDropdown() {
-  try {
-    var templates = await fetchJSON('/api/templates');
-    var sel = document.getElementById('f-template');
-    if (!sel) return;
-    sel.innerHTML = '<option value=\"\">Personalizado</option>' + templates.map(function(t) {
-      return '<option value=\"' + t.name + '\">' + t.icon + ' ' + t.name + ' - ' + t.description + '</option>';
-    }).join('');
-  } catch(e) { /* ignore */ }
-}
-
-async function loadTemplate() {
-  var name = document.getElementById('f-template').value;
-  if (!name) return;
-  try {
-    var templates = await fetchJSON('/api/templates');
-    var t = templates.find(function(tp) { return tp.name === name; });
-    if (!t) return;
-    document.getElementById('f-name').value = t.name + ' - ' + t.description;
-    document.getElementById('f-services').value = t.description;
-    window._templateData = t;
-  } catch(e) { /* ignore */ }
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-  loadClients();
-  loadAppointments();
-  $('newClientBtn').addEventListener('click', function() { showClientForm({}); });
-  $('clientModal').addEventListener('click', function(e) { if (e.target === $('clientModal')) $('clientModal').classList.remove('open'); });
-});
-
-async function openConversation(id) {
-  try {
-    const data = await fetchJSON('/api/dashboard/conversations/' + id);
-    const s = data.session;
-    $('modalInfo').innerHTML =
-      '<span><strong>Canal:</strong> ' + (s.channel||'—') + '</span>' +
-      '<span><strong>Teléfono:</strong> ' + (s.phone||'—') + '</span>' +
-      '<span><strong>ID:</strong> ' + s.id.substring(0,8) + '...</span>';
-    $('modalBody').innerHTML = data.messages.map(m =>
-      '<div class="chat-msg ' + m.role + '"><div>' + esc(m.content) + '</div><div class="time">' + formatTime(m.created_at) + '</div></div>'
-    ).join('');
-    $('modal').classList.add('open');
-  } catch (e) {
-    alert('Error al cargar conversación');
-  }
-}
-
-$('modalClose').onclick = () => $('modal').classList.remove('open');
-$('modal').onclick = (e) => { if (e.target === $('modal')) $('modal').classList.remove('open'); };
-
-document.querySelectorAll('.tab').forEach(tab => {
-  tab.onclick = () => {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-    $('panel-' + tab.dataset.tab).classList.add('active');
-  };
-});
-
-$('refreshBtn').onclick = function() { loadAll(); loadClients(); loadAppointments(); };
-
-loadAll();
-loadClients();
-loadAppointments();
-pollTimer = setInterval(function() { loadAll(); loadClients(); loadAppointments(); }, POLL_INTERVAL);
-</script>
+<script type="module" src="/dashboard/js/main.js"></script>
 </body>
 </html>
