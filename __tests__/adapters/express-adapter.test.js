@@ -290,6 +290,52 @@ describe('Express adapter', () => {
       const view = await fetch(`${base}/dashboard/js/views/clients.js`);
       expect(view.status).toBe(200);
 
+      const analyticsView = await fetch(`${base}/dashboard/js/views/analytics.js`);
+      expect(analyticsView.status).toBe(200);
+
+      server.close();
+    });
+  });
+
+  describe('GET /api/dashboard/analytics', () => {
+    it('returns analytics with kpis, channels, timeline and funnel', async () => {
+      const store = createMockStore();
+      store.getAnalytics = jest.fn(async ({ days, tenantId }) => ({
+        days,
+        kpis: { conversations: 10, messages: 40, leads: 3, appointments: 1, handoffs: 0, qualifiedConversations: 4, conversionRate: 30 },
+        byChannel: [{ channel: 'whatsapp', conversations: 8, leads: 2 }],
+        timeline: [{ date: '2026-08-01', conversations: 2, messages: 5, leads: 1 }],
+        funnel: { totalConversations: 10, leadsWithEmail: 4, contacts: 3, appointments: 1, handoffs: 0 },
+      }));
+      const app = createApp(createDeps({ store }));
+      const server = app.listen(0);
+      const { port } = server.address();
+
+      const response = await fetch(`http://localhost:${port}/api/dashboard/analytics?days=7`);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.kpis.conversations).toBe(10);
+      expect(data.kpis.conversionRate).toBe(30);
+      expect(data.byChannel[0].channel).toBe('whatsapp');
+      expect(data.funnel.totalConversations).toBe(10);
+      expect(store.getAnalytics).toHaveBeenCalledWith(expect.objectContaining({ days: 7, tenantId: null }));
+
+      server.close();
+    });
+
+    it('passes tenant filter when slug is provided', async () => {
+      const store = createMockStore();
+      store.getAnalytics = jest.fn(async () => ({ days: 30, kpis: {}, byChannel: [], timeline: [], funnel: {} }));
+      store.getTenantBySlug = jest.fn(async () => ({ id: 'tenant-1' }));
+      const app = createApp(createDeps({ store }));
+      const server = app.listen(0);
+      const { port } = server.address();
+
+      await fetch(`http://localhost:${port}/api/dashboard/analytics?tenant=mycompany`);
+
+      expect(store.getAnalytics).toHaveBeenCalledWith(expect.objectContaining({ tenantId: 'tenant-1' }));
+
       server.close();
     });
   });

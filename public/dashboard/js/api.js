@@ -24,6 +24,7 @@ function putJson(path, body) {
 export const api = {
   // Dashboard
   getStats: () => request('/api/dashboard/stats'),
+  getAnalytics: (days = 30, tenant = '') => request(`/api/dashboard/analytics?days=${days}${tenant ? `&tenant=${tenant}` : ''}`),
   getConversations: () => request('/api/dashboard/conversations'),
   getConversation: (id) => request(`/api/dashboard/conversations/${id}`),
   getHandoffs: () => request('/api/dashboard/handoffs'),

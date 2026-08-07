@@ -213,7 +213,7 @@ No inventes información que no esté aquí.
 | 3 | Tests automatizados (Jest, unitarios + integración) | Alta | ✅ Completado (74 tests) |
 | 5 | Creación automática de deals en HubSpot | Media | ✅ Completado |
 | — | Dashboard rediseñado (UI tipo BotPenguin + wizard "Create Chatbot" 4 pasos) | Alta | ✅ Completado |
-| 6 | Analíticas de conversión y métricas | Media | 📝 Pendiente |
+| 6 | Analíticas de conversión y métricas | Media | ✅ Completado |
 | 7 | Verificación de firmas HMAC en webhooks | Alta | ✅ Completado |
 | 8 | Soporte multilingüe (inglés, portugués) | Baja | 📝 Pendiente |
 | 9 | CI/CD con GitHub Actions | Alta | ✅ Completado |
@@ -387,7 +387,7 @@ El usuario solicitó PostgreSQL para producción. Las sesiones y mensajes requie
 | `/api/webhook` | POST | Webhook para chat web (HMAC opcional) |
 | `/api/meta-webhook` | GET | Verificación challenge Meta WhatsApp |
 | `/api/meta-webhook` | POST | Mensajes entrantes Meta WhatsApp |
-| `/api/dashboard/*` | GET | API del dashboard (stats, conversations, leads, handoffs) |
+| `/api/dashboard/*` | GET | API del dashboard (stats, conversations, leads, handoffs, analytics) |
 | `/dashboard` | GET | Dashboard web HTML |
 | `/widget/test` | GET | Página demo del widget |
 | `/widget.js` | GET | Script del widget embebible |
@@ -416,7 +416,8 @@ public/
         │   ├── handoffs.js       # Derivaciones a humano + asignación
         │   ├── leads.js          # Leads capturados
         │   ├── clients.js        # Chatbots (AI Agents): wizard "Create Chatbot" 4 pasos + edit + servicios
-        │   └── appointments.js   # Citas agendadas
+        │   ├── appointments.js   # Citas agendadas
+        │   └── analytics.js      # Analíticas: KPIs, canales, funnel, timeline (barras CSS puras)
         └── main.js               # Composición raíz: router de sidebar, polling de vista activa, DI
 ```
 

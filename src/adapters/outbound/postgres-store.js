@@ -850,6 +850,99 @@ function createStore() {
     return result.rows;
   }
 
+  async function getAnalytics({ days = 30, tenantId = null } = {}) {
+    const since = `NOW() - INTERVAL '${Math.max(1, Math.min(365, days))} days'`;
+    const tenantFilter = tenantId ? 'AND tenant_id = $1' : '';
+    const tenantParams = tenantId ? [tenantId] : [];
+
+    const [kpis, byChannel, timeline, funnel] = await Promise.all([
+      query(`
+        SELECT
+          (SELECT COUNT(*) FROM sessions WHERE created_at >= ${since} ${tenantFilter}) as conversations,
+          (SELECT COUNT(*) FROM messages
+             WHERE created_at >= ${since}
+               AND (${tenantId ? 'session_id IN (SELECT id FROM sessions WHERE tenant_id = $1)' : 'TRUE'})) as messages,
+          (SELECT COUNT(*) FROM contacts WHERE created_at >= ${since} ${tenantFilter}) as leads,
+          (SELECT COUNT(*) FROM appointments WHERE created_at >= ${since} ${tenantFilter}) as appointments,
+          (SELECT COUNT(*) FROM sessions
+             WHERE created_at >= ${since} AND context->'memory'->>'contact_email' IS NOT NULL
+               AND context->'memory'->>'contact_email' != '' ${tenantFilter}) as qualified_conversations,
+          (SELECT COUNT(*) FROM sessions
+             WHERE is_active = true AND context->>'handoffNeeded' = 'true' ${tenantFilter}) as handoffs
+      `, tenantParams),
+      query(`
+        SELECT channel,
+          COUNT(*) as conversations,
+          COUNT(*) FILTER (WHERE context->'memory'->>'contact_email' IS NOT NULL
+                             AND context->'memory'->>'contact_email' != '') as leads
+        FROM sessions
+        WHERE created_at >= ${since} ${tenantFilter}
+        GROUP BY channel
+        ORDER BY conversations DESC
+      `, tenantParams),
+      query(`
+        SELECT
+          d::date as date,
+          (SELECT COUNT(*) FROM sessions WHERE created_at::date = d ${tenantFilter}) as conversations,
+          (SELECT COUNT(*) FROM messages
+             WHERE created_at::date = d
+               AND (${tenantId ? 'session_id IN (SELECT id FROM sessions WHERE tenant_id = $1)' : 'TRUE'})) as messages,
+          (SELECT COUNT(*) FROM contacts WHERE created_at::date = d ${tenantFilter}) as leads
+        FROM generate_series(
+          (SELECT (NOW() - INTERVAL '${Math.max(1, Math.min(365, days))} days')::date),
+          CURRENT_DATE,
+          INTERVAL '1 day'
+        ) as d
+        ORDER BY d ASC
+      `, tenantParams),
+      query(`
+        SELECT
+          (SELECT COUNT(*) FROM sessions WHERE created_at >= ${since} ${tenantFilter}) as total_conversations,
+          (SELECT COUNT(*) FROM sessions
+             WHERE created_at >= ${since} AND context->'memory'->>'contact_email' IS NOT NULL
+               AND context->'memory'->>'contact_email' != '' ${tenantFilter}) as leads_with_email,
+          (SELECT COUNT(*) FROM contacts WHERE created_at >= ${since} ${tenantFilter}) as contacts,
+          (SELECT COUNT(*) FROM appointments WHERE created_at >= ${since} ${tenantFilter}) as appointments,
+          (SELECT COUNT(*) FROM sessions
+             WHERE is_active = true AND context->>'handoffNeeded' = 'true' ${tenantFilter}) as handoffs
+      `, tenantParams),
+    ]);
+
+    const k = kpis.rows[0];
+    const conversations = parseInt(k.conversations, 10) || 0;
+    const leads = parseInt(k.leads, 10) || 0;
+    return {
+      days,
+      kpis: {
+        conversations,
+        messages: parseInt(k.messages, 10) || 0,
+        leads,
+        appointments: parseInt(k.appointments, 10) || 0,
+        handoffs: parseInt(k.handoffs, 10) || 0,
+        qualifiedConversations: parseInt(k.qualified_conversations, 10) || 0,
+        conversionRate: conversations > 0 ? Math.round((leads / conversations) * 1000) / 10 : 0,
+      },
+      byChannel: byChannel.rows.map(r => ({
+        channel: r.channel,
+        conversations: parseInt(r.conversations, 10) || 0,
+        leads: parseInt(r.leads, 10) || 0,
+      })),
+      timeline: timeline.rows.map(r => ({
+        date: r.date,
+        conversations: parseInt(r.conversations, 10) || 0,
+        messages: parseInt(r.messages, 10) || 0,
+        leads: parseInt(r.leads, 10) || 0,
+      })),
+      funnel: {
+        totalConversations: parseInt(funnel.rows[0].total_conversations, 10) || 0,
+        leadsWithEmail: parseInt(funnel.rows[0].leads_with_email, 10) || 0,
+        contacts: parseInt(funnel.rows[0].contacts, 10) || 0,
+        appointments: parseInt(funnel.rows[0].appointments, 10) || 0,
+        handoffs: parseInt(funnel.rows[0].handoffs, 10) || 0,
+      },
+    };
+  }
+
   return { migrate, pool, getOrCreateSession, addMessage, getConversationHistory,
     updateSessionContext, saveContact, getActiveConversations, getConversationById, getLeads, getStats,
     getHandoffSessions, assignHandoff, getSession, upsertMemory, getMemory,
@@ -864,7 +957,7 @@ function createStore() {
     createSubscription, updateSubscription, setTenantBillingStatus, setTenantWompiSubscription,
     saveInvoice, getInvoicesByTenant, getAllInvoices, getInvoiceByReference, getInvoiceByTransactionId,
     getFinancialDashboard, getPastDueTenants, suspendTenant, reactivateTenant,
-    getActiveConversationsByTenant, getLeadsByTenant, getHandoffSessionsByTenant };
+    getActiveConversationsByTenant, getLeadsByTenant, getHandoffSessionsByTenant, getAnalytics };
 }
 
 module.exports = { createStore };

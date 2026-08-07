@@ -8,6 +8,7 @@ import { createHandoffsView } from './views/handoffs.js';
 import { createLeadsView } from './views/leads.js';
 import { createClientsView } from './views/clients.js';
 import { createAppointmentsView } from './views/appointments.js';
+import { createAnalyticsView } from './views/analytics.js';
 
 const POLL_INTERVAL = 5000;
 
@@ -18,6 +19,7 @@ const VIEWS = {
   leads: createLeadsView,
   clients: createClientsView,
   appointments: createAppointmentsView,
+  analytics: createAnalyticsView,
 };
 
 const TITLES = {
@@ -27,6 +29,7 @@ const TITLES = {
   leads: 'Leads',
   clients: 'Chatbots',
   appointments: 'Citas',
+  analytics: 'Analíticas',
 };
 
 let views = {};

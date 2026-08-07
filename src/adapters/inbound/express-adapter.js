@@ -253,6 +253,23 @@ h1{font-size:22px;color:#1e293b;margin-bottom:8px}p{color:#64748b;margin-bottom:
     }
   });
 
+  app.get('/api/dashboard/analytics', requireDashboardAuth, async (req, res) => {
+    try {
+      const days = parseInt(req.query.days, 10) || 30;
+      const { tenant: slug } = req.query;
+      let tenantId = null;
+      if (slug) {
+        const tenant = await deps.store.getTenantBySlug(slug);
+        tenantId = tenant?.id || null;
+      }
+      const analytics = await deps.store.getAnalytics({ days, tenantId });
+      res.json(analytics);
+    } catch (error) {
+      logger.error('Dashboard analytics error', { error: error.message });
+      res.status(500).json({ error: 'Error al obtener analíticas' });
+    }
+  });
+
   app.get('/api/dashboard/conversations', requireDashboardAuth, async (req, res) => {
     try {
       const conversations = await deps.store.getActiveConversations();
