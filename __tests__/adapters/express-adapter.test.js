@@ -21,6 +21,12 @@ function createDeps(overrides = {}) {
       handoffNeeded: false,
     })),
     getQrCode: jest.fn(() => 'qr-data-string'),
+    billing: {
+      createPaymentSession: jest.fn(async () => ({ transactionId: 'tx-1', reference: 'ref-1', status: 'PENDING', redirectUrl: 'https://pay.example/1' })),
+      getFinancialInstitutions: jest.fn(async () => [{ code: '1', name: 'Bancolombia' }]),
+      verifyWebhookSignature: jest.fn(() => true),
+      handleTransactionUpdated: jest.fn(async () => ({ handled: true })),
+    },
   };
 }
 
@@ -183,6 +189,69 @@ describe('Express adapter', () => {
     });
   });
 
+  describe('Billing endpoints', () => {
+    it('GET /api/billing/institutions returns institutions', async () => {
+      const app = createApp(createDeps());
+      const server = app.listen(0);
+      const { port } = server.address();
+
+      const response = await fetch(`http://localhost:${port}/api/billing/institutions`);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(Array.isArray(data)).toBe(true);
+
+      server.close();
+    });
+
+    it('POST /api/billing/checkout creates a payment session', async () => {
+      const deps = createDeps();
+      delete process.env.DASHBOARD_USERNAME;
+      const app = createApp(deps);
+      const server = app.listen(0);
+      const { port } = server.address();
+
+      const response = await fetch(`http://localhost:${port}/api/billing/checkout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug: 'test', plan: 'pro' }),
+      });
+      const data = await response.json();
+
+      expect(response.status).toBe(201);
+      expect(data.redirectUrl).toContain('https://pay.example');
+
+      server.close();
+    });
+
+    it('POST /api/wompi-webhook responds 200 and processes transaction', async () => {
+      const deps = createDeps();
+      const app = createApp(deps);
+      const server = app.listen(0);
+      const { port } = server.address();
+
+      const event = {
+        event: 'transaction.updated',
+        data: { transaction: { id: 'tx-1', status: 'APPROVED', reference: 'ref-1', amount_in_cents: 1000 } },
+        signature: { properties: [], checksum: 'x' },
+        timestamp: 1000,
+      };
+
+      const response = await fetch(`http://localhost:${port}/api/wompi-webhook`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(event),
+      });
+
+      expect(response.status).toBe(200);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(deps.billing.verifyWebhookSignature).toHaveBeenCalled();
+      expect(deps.billing.handleTransactionUpdated).toHaveBeenCalled();
+
+      server.close();
+    });
+  });
+
   describe('404 handling', () => {
     it('returns 404 for unknown routes', async () => {
       const app = createApp(createDeps());
@@ -192,6 +261,34 @@ describe('Express adapter', () => {
       const response = await fetch(`http://localhost:${port}/nonexistent`);
 
       expect(response.status).toBe(404);
+
+      server.close();
+    });
+  });
+
+  describe('Dashboard static assets', () => {
+    it('serves the dashboard skeleton and modular assets', async () => {
+      const app = createApp(createDeps());
+      const server = app.listen(0);
+      const { port } = server.address();
+      const base = `http://localhost:${port}`;
+
+      const html = await fetch(`${base}/dashboard`);
+      expect(html.status).toBe(200);
+      const htmlText = await html.text();
+      expect(htmlText).toContain('/dashboard/styles.css');
+      expect(htmlText).toContain('/dashboard/js/main.js');
+
+      const css = await fetch(`${base}/dashboard/styles.css`);
+      expect(css.status).toBe(200);
+      expect(css.headers.get('content-type')).toContain('text/css');
+
+      const js = await fetch(`${base}/dashboard/js/main.js`);
+      expect(js.status).toBe(200);
+      expect(js.headers.get('content-type')).toContain('javascript');
+
+      const view = await fetch(`${base}/dashboard/js/views/clients.js`);
+      expect(view.status).toBe(200);
 
       server.close();
     });

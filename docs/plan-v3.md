@@ -84,13 +84,13 @@ Superar a competidores (BotPenguin, Authkey, WATI) ofreciendo un bot multi-tenan
 ### Fase 4: Billing + Notificaciones (Semana 5-6)
 **Objetivo:** Monetización automatizada para revendedores.
 
-| # | Tarea | Prioridad |
-|---|---|---|
-| 4.1 | Tabla `subscriptions` + `invoices` | Crítica |
-| 4.2 | Stripe/PayPal integration para cobro recurrente | Crítica |
-| 4.3 | Auto-suspensión de tenant por falta de pago | Alta |
-| 4.4 | Email al dueño: nuevo lead, quota al 80%, factura | Alta |
-| 4.5 | Dashboard financiero para revendedor (MRR, churn) | Media |
+| # | Tarea | Prioridad | Estado |
+|---|---|---|---|
+| 4.1 | Tabla `subscriptions` + `invoices` | Crítica | ✅ Completado |
+| 4.2 | Pasarela de pagos (Wompi — PSE/Nequi/tarjetas) | Crítica | ✅ Completado |
+| 4.3 | Auto-suspensión de tenant por falta de pago | Alta | ✅ Completado |
+| 4.4 | Email al dueño: nuevo lead, quota al 80%, factura | Alta | ✅ Completado |
+| 4.5 | Dashboard financiero para revendedor (MRR, churn) | Media | ✅ API completada, UI pendiente |
 
 ### Fase 5: Analytics + Exportación (Semana 7-8)
 **Objetivo:** Datos para que el revendedor demuestre ROI a sus clientes.

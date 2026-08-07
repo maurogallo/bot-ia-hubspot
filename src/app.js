@@ -6,6 +6,8 @@ const { createProvider: createOllama } = require('./adapters/outbound/ollama-pro
 const { createProvider: createGroq } = require('./adapters/outbound/groq-provider');
 const { createProvider: createCRM } = require('./adapters/outbound/hubspot-provider');
 const { createProvider: createCalendar } = require('./adapters/outbound/google-calendar-provider');
+const { createProvider: createWompi } = require('./adapters/outbound/wompi-provider');
+const { sendTenantSuspendedNotification } = require('./adapters/outbound/notification-service');
 const { createApp } = require('./adapters/inbound/express-adapter');
 const { createAdapter: createWebJSWA } = require('./adapters/inbound/whatsapp-adapter');
 const { createAdapter: createMetaWA } = require('./adapters/inbound/meta-whatsapp-adapter');
@@ -31,6 +33,7 @@ const ai = {
 const crm = createCRM();
 const calendar = createCalendar(config.calendar);
 const tenantResolver = createResolver(store);
+const billing = createWompi();
 
 const KNOWLEDGE_SEED = [
   { content: 'NeoWeb Studio es una agencia especializada en desarrollo web, landing pages y automatización de procesos. Fundada para ayudar a pymes y emprendedores a tener presencia digital profesional sin pagar costos excesivos.', metadata: { type: 'company_info' } },
@@ -109,7 +112,7 @@ async function seedTemplates() {
   }
 }
 
-const deps = { store, ai, crm, calendar, handleMessage, tenantResolver };
+const deps = { store, ai, crm, calendar, handleMessage, tenantResolver, billing };
 
 const createWhatsApp = config.whatsapp.driver === 'meta' ? createMetaWA : createWebJSWA;
 const whatsapp = createWhatsApp(deps);
@@ -120,4 +123,21 @@ deps.telegramHandleIncoming = telegram.handleMessage;
 
 const app = createApp(deps);
 
-module.exports = { app, store, whatsapp, seedKnowledge, seedTemplates };
+async function runBillingSweep() {
+  try {
+    const pastDue = await store.getPastDueTenants();
+    for (const tenant of pastDue) {
+      logger.warn('Suspending tenant for unpaid billing', { tenantId: tenant.id, slug: tenant.slug });
+      await store.suspendTenant(tenant.id);
+      sendTenantSuspendedNotification(tenant).catch(() => {});
+    }
+  } catch (err) {
+    logger.warn('Billing sweep failed', { error: err.message });
+  }
+}
+
+const billingSweepInterval = config.billing.provider !== 'none'
+  ? setInterval(runBillingSweep, 6 * 60 * 60 * 1000)
+  : null;
+
+module.exports = { app, store, whatsapp, seedKnowledge, seedTemplates, runBillingSweep };

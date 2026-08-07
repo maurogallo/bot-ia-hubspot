@@ -105,6 +105,17 @@ Bot comercial multicanal con IA (GPT-4o mini) que captura, califica y registra l
 - ✅ Helmet.js headers de seguridad
 - ✅ CORS configurable
 
+### 2.13 Billing (Suscripciones — Fase 4)
+- ✅ Pasarela **Wompi** (Colombia) con PSE/Nequi/tarjetas — Puerto `billing-provider` intercambiable
+- ✅ Tablas `subscriptions` e `invoices` + columnas `billing_status`, `billing_period_end`, `wompi_subscription_id` en tenants
+- ✅ Checkout PSE: `POST /api/billing/checkout` crea suscripción + factura y devuelve URL de pago async
+- ✅ Webhook `POST /api/wompi-webhook` con verificación de firma SHA256 (checksum de propiedades + timestamp + events secret)
+- ✅ Auto-activación al aprobarse el pago (tenant `active`, período 30 días)
+- ✅ Auto-suspensión por impago: job cada 6h suspende tenants en `past_due` fuera del período de gracia
+- ✅ Emails: factura pagada, pago fallido, suspensión y alerta de quota al 80%
+- ✅ Dashboard financiero: `GET /api/dashboard/financials` (MRR, ingresos 30d, churn, suscripciones activas)
+- ⚠️ Pendiente: cobro recurrente automático (tokenización de fuente de pago), dashboard UI financiero
+
 ---
 
 ## 3. Base de Datos
@@ -277,6 +288,15 @@ src/
 ---
 
 ## 10. Changelog
+
+### 6 de agosto de 2026
+- **Fase 4 — Billing con Wompi**: pasarela de pagos Colombia (PSE/Nequi/tarjetas)
+- Tablas `subscriptions` + `invoices` + columnas billing en tenants (migración automática)
+- `wompi-provider.js`: checkout PSE, verificación firma webhook (SHA256), manejo de `transaction.updated`
+- Webhook `POST /api/wompi-webhook` + endpoints `/api/billing/checkout`, `/api/billing/institutions`, `/api/billing/subscriptions`, `/api/tenants/:slug/billing`, `/api/dashboard/financials`
+- Auto-suspensión por impago (job cada 6h + bloqueo en handleMessage) y auto-activación al pagar
+- Emails: factura pagada/fallida, suspensión, alerta quota 80% (una vez al mes)
+- Config en `.env`: `WOMPI_*`, `BILLING_*` (precios por plan en COP)
 
 ### 4 de agosto de 2026
 - **Email notifications**: envio automatico a `synaptiqnova@gmail.com` al capturar lead completo (nombre + email)

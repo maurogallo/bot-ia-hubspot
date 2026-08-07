@@ -92,6 +92,49 @@ function createStore() {
         ALTER TABLE IF EXISTS sessions ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id);
         ALTER TABLE IF EXISTS contacts ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id);
 
+        ALTER TABLE IF EXISTS tenants ADD COLUMN IF NOT EXISTS billing_status TEXT DEFAULT 'inactive'
+          CHECK (billing_status IN ('inactive','active','past_due','canceled','trial'));
+        ALTER TABLE IF EXISTS tenants ADD COLUMN IF NOT EXISTS billing_period_end TIMESTAMPTZ;
+        ALTER TABLE IF EXISTS tenants ADD COLUMN IF NOT EXISTS wompi_subscription_id TEXT;
+
+        CREATE TABLE IF NOT EXISTS subscriptions (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+          plan TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'pending'
+            CHECK (status IN ('pending','active','past_due','canceled','trialing')),
+          provider TEXT DEFAULT 'wompi',
+          provider_subscription_id TEXT UNIQUE,
+          amount_in_cents INTEGER NOT NULL,
+          currency TEXT DEFAULT 'COP',
+          current_period_start TIMESTAMPTZ,
+          current_period_end TIMESTAMPTZ,
+          cancel_at_period_end BOOLEAN DEFAULT false,
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          updated_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_subscriptions_tenant ON subscriptions(tenant_id);
+        CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(status);
+
+        CREATE TABLE IF NOT EXISTS invoices (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          tenant_id UUID REFERENCES tenants(id),
+          subscription_id UUID REFERENCES subscriptions(id) ON DELETE SET NULL,
+          provider_transaction_id TEXT UNIQUE,
+          reference TEXT UNIQUE,
+          amount_in_cents INTEGER NOT NULL,
+          currency TEXT DEFAULT 'COP',
+          status TEXT DEFAULT 'pending'
+            CHECK (status IN ('pending','paid','failed','voided','refunded')),
+          payment_method TEXT,
+          metadata JSONB DEFAULT '{}',
+          paid_at TIMESTAMPTZ,
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_invoices_tenant ON invoices(tenant_id, created_at);
+        CREATE INDEX IF NOT EXISTS idx_invoices_subscription ON invoices(subscription_id);
+        CREATE INDEX IF NOT EXISTS idx_invoices_reference ON invoices(reference);
+
         CREATE TABLE IF NOT EXISTS appointments (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
           tenant_id UUID REFERENCES tenants(id),
@@ -581,6 +624,192 @@ function createStore() {
     return stats;
   }
 
+  // ---- Billing / Subscriptions ----
+
+  async function getActiveSubscriptionByTenant(tenantId) {
+    const result = await query(
+      `SELECT * FROM subscriptions WHERE tenant_id = $1 AND status IN ('active','trialing','past_due')
+       ORDER BY created_at DESC LIMIT 1`,
+      [tenantId]
+    );
+    return result.rows[0] || null;
+  }
+
+  async function getSubscriptionByTenant(tenantId) {
+    const result = await query(
+      'SELECT * FROM subscriptions WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 1',
+      [tenantId]
+    );
+    return result.rows[0] || null;
+  }
+
+  async function getAllSubscriptions() {
+    const result = await query(`
+      SELECT s.*, t.slug, t.business_name, t.owner_email
+      FROM subscriptions s JOIN tenants t ON s.tenant_id = t.id
+      ORDER BY s.created_at DESC
+    `);
+    return result.rows;
+  }
+
+  async function createSubscription(data) {
+    const { tenantId, plan, status = 'pending', provider = 'wompi',
+      providerSubscriptionId = null, amountInCents, currency = 'COP',
+      currentPeriodStart = null, currentPeriodEnd = null } = data;
+    const result = await query(
+      `INSERT INTO subscriptions (tenant_id, plan, status, provider, provider_subscription_id,
+         amount_in_cents, currency, current_period_start, current_period_end)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+      [tenantId, plan, status, provider, providerSubscriptionId,
+        amountInCents, currency, currentPeriodStart, currentPeriodEnd]
+    );
+    return result.rows[0];
+  }
+
+  async function updateSubscription(id, data) {
+    const sets = [];
+    const values = [];
+    let idx = 1;
+    const map = {
+      plan: 'plan',
+      status: 'status',
+      providerSubscriptionId: 'provider_subscription_id',
+      amountInCents: 'amount_in_cents',
+      currency: 'currency',
+      currentPeriodStart: 'current_period_start',
+      currentPeriodEnd: 'current_period_end',
+      cancelAtPeriodEnd: 'cancel_at_period_end',
+    };
+    for (const [key, col] of Object.entries(map)) {
+      if (data[key] !== undefined) {
+        sets.push(`${col} = $${idx++}`);
+        values.push(data[key]);
+      }
+    }
+    if (sets.length === 0) return null;
+    sets.push('updated_at = NOW()');
+    values.push(id);
+    const result = await query(
+      `UPDATE subscriptions SET ${sets.join(', ')} WHERE id = $${idx} RETURNING *`,
+      values
+    );
+    return result.rows[0] || null;
+  }
+
+  async function setTenantBillingStatus(tenantId, status, periodEnd = null) {
+    await query(
+      `UPDATE tenants SET billing_status = $2, billing_period_end = COALESCE($3, billing_period_end),
+         updated_at = NOW() WHERE id = $1`,
+      [tenantId, status, periodEnd]
+    );
+  }
+
+  async function setTenantWompiSubscription(tenantId, wompiSubscriptionId) {
+    await query(
+      'UPDATE tenants SET wompi_subscription_id = $2, updated_at = NOW() WHERE id = $1',
+      [tenantId, wompiSubscriptionId]
+    );
+  }
+
+  async function saveInvoice(data) {
+    const { tenantId, subscriptionId, providerTransactionId, reference,
+      amountInCents, currency = 'COP', status = 'pending', paymentMethod = null,
+      metadata = {}, paidAt = null } = data;
+    const result = await query(
+      `INSERT INTO invoices (tenant_id, subscription_id, provider_transaction_id, reference,
+         amount_in_cents, currency, status, payment_method, metadata, paid_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10)
+       ON CONFLICT (provider_transaction_id) DO UPDATE SET
+         status = EXCLUDED.status,
+         payment_method = COALESCE(EXCLUDED.payment_method, invoices.payment_method),
+         metadata = invoices.metadata || EXCLUDED.metadata,
+         paid_at = COALESCE(EXCLUDED.paid_at, invoices.paid_at)
+       RETURNING *`,
+      [tenantId, subscriptionId, providerTransactionId, reference,
+        amountInCents, currency, status, paymentMethod, JSON.stringify(metadata), paidAt]
+    );
+    return result.rows[0];
+  }
+
+  async function getInvoicesByTenant(tenantId, limit = 50) {
+    const result = await query(
+      'SELECT * FROM invoices WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT $2',
+      [tenantId, limit]
+    );
+    return result.rows;
+  }
+
+  async function getAllInvoices(limit = 100) {
+    const result = await query(`
+      SELECT i.*, t.slug, t.business_name
+      FROM invoices i JOIN tenants t ON i.tenant_id = t.id
+      ORDER BY i.created_at DESC LIMIT $1
+    `, [limit]);
+    return result.rows;
+  }
+
+  async function getInvoiceByReference(reference) {
+    const result = await query('SELECT * FROM invoices WHERE reference = $1', [reference]);
+    return result.rows[0] || null;
+  }
+
+  async function getInvoiceByTransactionId(providerTransactionId) {
+    const result = await query('SELECT * FROM invoices WHERE provider_transaction_id = $1', [providerTransactionId]);
+    return result.rows[0] || null;
+  }
+
+  async function getFinancialDashboard() {
+    const result = await query(`
+      SELECT
+        (SELECT COALESCE(SUM(amount_in_cents), 0) FROM invoices WHERE status = 'paid'
+           AND paid_at >= date_trunc('month', NOW())) as mrr_this_month,
+        (SELECT COALESCE(SUM(amount_in_cents), 0) FROM invoices WHERE status = 'paid'
+           AND paid_at >= NOW() - INTERVAL '30 days') as revenue_30d,
+        (SELECT COUNT(*) FROM subscriptions WHERE status IN ('active','trialing')) as active_subscriptions,
+        (SELECT COUNT(*) FROM subscriptions WHERE status = 'canceled') as canceled_subscriptions,
+        (SELECT COUNT(*) FROM tenants) as total_tenants,
+        (SELECT COUNT(*) FROM tenants WHERE billing_status = 'active' OR billing_status = 'trial') as active_tenants
+    `);
+    const counts = result.rows[0];
+    const active = parseInt(counts.active_subscriptions, 10) || 0;
+    const canceled = parseInt(counts.canceled_subscriptions, 10) || 0;
+    const churn = (active + canceled) > 0 ? canceled / (active + canceled) : 0;
+    return {
+      mrr_this_month_cents: parseInt(counts.mrr_this_month, 10) || 0,
+      revenue_30d_cents: parseInt(counts.revenue_30d, 10) || 0,
+      active_subscriptions: active,
+      canceled_subscriptions: canceled,
+      total_tenants: parseInt(counts.total_tenants, 10) || 0,
+      active_tenants: parseInt(counts.active_tenants, 10) || 0,
+      churn_rate: Number(churn.toFixed(4)),
+    };
+  }
+
+  async function getPastDueTenants() {
+    const result = await query(`
+      SELECT * FROM tenants
+      WHERE billing_status IN ('past_due', 'active')
+        AND billing_period_end IS NOT NULL
+        AND billing_period_end < NOW() - (COALESCE(($1::int), 3) * INTERVAL '1 day')
+        AND is_active = true
+    `, [config.billing.graceDays]);
+    return result.rows;
+  }
+
+  async function suspendTenant(tenantId) {
+    await query(
+      "UPDATE tenants SET is_active = false, billing_status = 'past_due', updated_at = NOW() WHERE id = $1",
+      [tenantId]
+    );
+  }
+
+  async function reactivateTenant(tenantId) {
+    await query(
+      "UPDATE tenants SET is_active = true, billing_status = 'active', updated_at = NOW() WHERE id = $1",
+      [tenantId]
+    );
+  }
+
   // ---- Tenant-scoped existing queries ----
 
   async function getActiveConversationsByTenant(tenantId, limit = 20) {
@@ -631,6 +860,10 @@ function createStore() {
     saveAppointment, getAppointmentsByEmail, getAppointmentsByTenant,
     getUpcomingAppointments, updateAppointmentStatus, cancelAppointment, getAppointmentById,
     getMonthlyUsage, logUsage, getUsageStats,
+    getActiveSubscriptionByTenant, getSubscriptionByTenant, getAllSubscriptions,
+    createSubscription, updateSubscription, setTenantBillingStatus, setTenantWompiSubscription,
+    saveInvoice, getInvoicesByTenant, getAllInvoices, getInvoiceByReference, getInvoiceByTransactionId,
+    getFinancialDashboard, getPastDueTenants, suspendTenant, reactivateTenant,
     getActiveConversationsByTenant, getLeadsByTenant, getHandoffSessionsByTenant };
 }
 

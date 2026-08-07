@@ -86,6 +86,28 @@ const config = {
     pass: process.env.SMTP_PASS || '',
     from: process.env.SMTP_FROM || 'bot@neowebstudio.com',
   },
+
+  billing: {
+    provider: process.env.BILLING_PROVIDER || 'wompi',
+    currency: process.env.BILLING_CURRENCY || 'COP',
+    webhookUrl: process.env.BILLING_WEBHOOK_URL || '/api/wompi-webhook',
+    successUrl: process.env.BILLING_SUCCESS_URL || 'https://bot.synaptiqnova.online/dashboard',
+    cancelUrl: process.env.BILLING_CANCEL_URL || 'https://bot.synaptiqnova.online/dashboard',
+    graceDays: parseInt(process.env.BILLING_GRACE_DAYS, 10) || 3,
+    planPrices: {
+      starter: parseInt(process.env.BILLING_PRICE_STARTER, 10) || 99000,
+      business: parseInt(process.env.BILLING_PRICE_BUSINESS, 10) || 249000,
+      pro: parseInt(process.env.BILLING_PRICE_PRO, 10) || 499000,
+      enterprise: parseInt(process.env.BILLING_PRICE_ENTERPRISE, 10) || 990000,
+    },
+  },
+
+  wompi: {
+    publicKey: process.env.WOMPI_PUBLIC_KEY || '',
+    privateKey: process.env.WOMPI_PRIVATE_KEY || '',
+    eventsSecret: process.env.WOMPI_EVENTS_SECRET || '',
+    environment: process.env.WOMPI_ENVIRONMENT || 'sandbox',
+  },
 };
 
 module.exports = config;

@@ -178,4 +178,32 @@ describe('handleMessage', () => {
     expect(store.upsertMemory).toHaveBeenCalledWith(expect.any(String), 'contact_phone', '+549110002');
     expect(store.upsertMemory).toHaveBeenCalledWith(expect.any(String), 'service_interest', 'web');
   });
+
+  it('blocks messages from a tenant with billing suspended', async () => {
+    const { store, ai, crm } = setup();
+    const tenant = { id: 'tenant-1', slug: 'test', plan: 'pro', billing_status: 'past_due' };
+
+    const result = await handleMessage({ message: 'Hola', from: '+549110003', channel: 'web', store, ai, crm, tenant });
+
+    expect(result.billingSuspended).toBe(true);
+    expect(result.response).toContain('suscripcion');
+    expect(store.getOrCreateSession).not.toHaveBeenCalled();
+    expect(ai.generateResponse).not.toHaveBeenCalled();
+  });
+
+  it('sends quota warning when usage reaches 80% of limit (once per month)', async () => {
+    const { store, ai, crm } = setup();
+    const tenant = { id: 'tenant-1', slug: 'test', plan: 'starter' };
+    store.getMonthlyUsage = jest.fn(async (tenantId, metric) => {
+      return metric === 'quota_warning_80' ? 0 : 80;
+    });
+    const notifyService = require('../../src/adapters/outbound/notification-service');
+    const spy = jest.spyOn(notifyService, 'sendQuotaWarning').mockResolvedValue();
+
+    await handleMessage({ message: 'Hola', from: '+549110004', channel: 'web', store, ai, crm, tenant });
+
+    expect(spy).toHaveBeenCalled();
+    expect(store.logUsage).toHaveBeenCalledWith(expect.any(String), 'quota_warning_80', 1);
+    spy.mockRestore();
+  });
 });

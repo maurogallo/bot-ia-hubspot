@@ -625,6 +625,115 @@ h1{font-size:22px;color:#1e293b;margin-bottom:8px}p{color:#64748b;margin-bottom:
     }
   });
 
+  // ---- Billing / Wompi ----
+
+  app.post('/api/billing/checkout', requireDashboardAuth, async (req, res) => {
+    try {
+      const { slug, plan } = req.body;
+      if (!slug || !plan) return res.status(400).json({ error: 'slug y plan son obligatorios' });
+      if (!deps.billing) return res.status(400).json({ error: 'Billing no configurado' });
+
+      const tenant = await deps.store.getTenantBySlug(slug);
+      if (!tenant) return res.status(404).json({ error: 'Tenant no encontrado' });
+
+      const price = config.billing.planPrices[plan] || config.billing.planPrices[tenant.plan];
+      if (!price) return res.status(400).json({ error: 'Plan sin precio configurado' });
+
+      const reference = `${tenant.slug}-${Date.now()}`;
+
+      const subscription = await deps.store.createSubscription({
+        tenantId: tenant.id,
+        plan,
+        status: 'pending',
+        provider: 'wompi',
+        amountInCents: price,
+        currency: config.billing.currency,
+      });
+
+      const invoice = await deps.store.saveInvoice({
+        tenantId: tenant.id,
+        subscriptionId: subscription.id,
+        reference,
+        amountInCents: price,
+        currency: config.billing.currency,
+        status: 'pending',
+        metadata: { plan },
+      });
+
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+      const successUrl = config.billing.successUrl.startsWith('http')
+        ? config.billing.successUrl
+        : `${baseUrl}${config.billing.successUrl}`;
+      const session = await deps.billing.createPaymentSession({ tenant, subscription, invoice, redirectUrl: successUrl });
+      res.status(201).json(session);
+    } catch (error) {
+      logger.error('Billing checkout error', { error: error.message });
+      res.status(500).json({ error: `Error al crear pago: ${error.message}` });
+    }
+  });
+
+  app.get('/api/billing/institutions', async (req, res) => {
+    try {
+      if (!deps.billing) return res.json([]);
+      const institutions = await deps.billing.getFinancialInstitutions();
+      res.json(institutions);
+    } catch (error) {
+      logger.error('Billing institutions error', { error: error.message });
+      res.status(500).json({ error: 'Error al obtener instituciones financieras' });
+    }
+  });
+
+  app.get('/api/billing/subscriptions', requireDashboardAuth, async (req, res) => {
+    try {
+      const subscriptions = await deps.store.getAllSubscriptions();
+      res.json(subscriptions);
+    } catch (error) {
+      logger.error('Billing subscriptions error', { error: error.message });
+      res.status(500).json({ error: 'Error al obtener suscripciones' });
+    }
+  });
+
+  app.get('/api/tenants/:slug/billing', requireDashboardAuth, async (req, res) => {
+    try {
+      const tenant = await deps.store.getTenantBySlug(req.params.slug);
+      if (!tenant) return res.status(404).json({ error: 'Tenant no encontrado' });
+      const subscription = await deps.store.getSubscriptionByTenant(tenant.id);
+      const invoices = await deps.store.getInvoicesByTenant(tenant.id);
+      res.json({ tenant, subscription, invoices });
+    } catch (error) {
+      logger.error('Tenant billing error', { error: error.message });
+      res.status(500).json({ error: 'Error al obtener billing' });
+    }
+  });
+
+  app.get('/api/dashboard/financials', requireDashboardAuth, async (req, res) => {
+    try {
+      const financials = await deps.store.getFinancialDashboard();
+      res.json(financials);
+    } catch (error) {
+      logger.error('Financials error', { error: error.message });
+      res.status(500).json({ error: 'Error al obtener metricas financieras' });
+    }
+  });
+
+  app.post('/api/wompi-webhook', async (req, res) => {
+    res.status(200).json({ received: true });
+    try {
+      const event = req.body;
+      if (!deps.billing) return;
+      const headerChecksum = req.headers['x-event-checksum'];
+      if (!deps.billing.verifyWebhookSignature(event, headerChecksum)) {
+        logger.warn('Wompi webhook: firma invalida, ignorando evento', { event: event?.event });
+        return;
+      }
+      if (event?.event === 'transaction.updated') {
+        await deps.billing.handleTransactionUpdated(event.data?.transaction, { store: deps.store });
+      }
+    } catch (error) {
+      logger.error('Wompi webhook processing error', { error: error.message });
+    }
+  });
+
   app.use((req, res) => { res.status(404).json({ error: 'Ruta no encontrada' }); });
   app.use((err, req, res, next) => {
     logger.error('Unhandled error', { error: err.message, stack: err.stack, path: req.path });

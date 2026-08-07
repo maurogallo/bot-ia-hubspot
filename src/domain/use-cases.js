@@ -52,6 +52,12 @@ async function handleMessage({ message, from, channel, store, ai, crm, calendar,
   const features = getTenantFeatures(tenant);
   const tenantId = tenant?.id || null;
 
+  if (tenant && tenant.billing_status === 'past_due') {
+    logger.warn('Tenant suspended by billing', { tenantId, slug: tenant.slug });
+    const suspendedMsg = 'Tu suscripcion esta pendiente de pago. Por favor contacta a tu proveedor para reactivar el servicio.';
+    return { response: suspendedMsg, leadData: null, handoffNeeded: false, quotaExceeded: false, billingSuspended: true };
+  }
+
   if (tenant) {
     const quotaLimit = getQuotaLimit(tenant, 'conversations');
     if (quotaLimit !== -1 && typeof store.getMonthlyUsage === 'function') {
@@ -60,6 +66,16 @@ async function handleMessage({ message, from, channel, store, ai, crm, calendar,
         logger.warn('Quota exceeded for tenant', { tenantId, slug: tenant.slug, usage, limit: quotaLimit });
         const quotaMsg = 'Lo siento, hemos alcanzado el limite de conversaciones de este mes. Por favor contacta a tu proveedor para ampliar el plan.';
         return { response: quotaMsg, leadData: null, handoffNeeded: false, quotaExceeded: true };
+      }
+      if (usage >= Math.floor(quotaLimit * 0.8) && notifyService?.sendQuotaWarning) {
+        let warned = 0;
+        if (typeof store.getMonthlyUsage === 'function') {
+          try { warned = await store.getMonthlyUsage(tenantId, 'quota_warning_80'); } catch (e) { /* ignore */ }
+        }
+        if (!warned) {
+          notifyService.sendQuotaWarning(tenant, usage, quotaLimit).catch(() => {});
+          if (typeof store.logUsage === 'function') store.logUsage(tenantId, 'quota_warning_80', 1).catch(() => {});
+        }
       }
     }
   }
